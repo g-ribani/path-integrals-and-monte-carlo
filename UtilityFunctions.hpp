@@ -23,14 +23,8 @@ std::vector<double>
 
 // returns a vector of points from in up to (at most) fin spaced by step
 std::vector<double> StepRange(double in, double fin, double step) {
-   std::vector<double> ret;
-   if(in == fin) ret.push_back(in);
-   else if(fin > in) {
-      if(step > 0.) for(double x = in; x <= fin; x += step) ret.push_back(x);
-   }
-   else if (step < 0.)
-         for (double x = in; x >= fin; x += step) ret.push_back(x);
-   return ret;
+   const std::vector<double>::size_type n = std::round( (fin - in)/step ) + 1;
+   return LinearRange(in,fin,n);
 }
 
 #ifndef USE_ITERATORS
@@ -63,12 +57,12 @@ std::vector<double> StepRange(double in, double fin, double step) {
    }
 
    template<class K, class T> std::ostream& operator <<
-      (std::ostream& o, std::map<K,T> m) {
+      (std::ostream& o, const std::map<K,T>& m) {
          for(auto p : m) o << p << ' ';
          return o;
    }
 
-#else // do USE_ITERATORS
+#else // USE_ITERATORS
 
 // writes std::array on std::ostream
    template<class T, std::size_t N> std::ostream& operator <<
@@ -94,7 +88,7 @@ std::vector<double> StepRange(double in, double fin, double step) {
 
 // writes std::map on std::ostream
    template<class K, class T> std::ostream& operator <<
-      (std::ostream& o, std::map<K,T> m) {
+      (std::ostream& o, const std::map<K,T>& m) {
          o << "{ ";
          for(auto p : m) o << p << ' ';
          return o << '}';
@@ -103,14 +97,14 @@ std::vector<double> StepRange(double in, double fin, double step) {
 #endif // USE_ITERATORS
 
 // obtains the vector of keys from a std::map
-template<class K, class V> std::vector<K> GetKeys(std::map<K,V> m) {
+template<class K, class V> std::vector<K> GetKeys(const std::map<K,V>& m) {
    std::vector<K> k;
    for (auto p : m) k.push_back(std::get<0>(p));
    return k;
 }
 
 // obtains the vector of values from a std::map
-template<class K, class V> std::vector<V> GetValues(std::map<K,V> m) {
+template<class K, class V> std::vector<V> GetValues(const std::map<K,V>& m) {
    std::vector<V> v;
    for (auto p : m) v.push_back(std::get<1>(p));
    return v;
