@@ -13,8 +13,8 @@ template<class C, class D> void CheckSolvability(DynamicalSystem<C,D>* s) {
 int main() {
    EuclideanHarmonicOscillator osci;
    std::map<const char*,double> vars =
-      {std::pair("frequency",osci.GetFrequency()),
-       std::pair("mass",osci.GetMass())};
+      {std::pair("frequency",osci.Frequency()),
+       std::pair("mass",osci.Mass())};
    std::cout << "Properties of the " << demangle(typeid(osci).name()) << ": "
       << vars << '\n';
    osci.SetCondition(0.,0.);

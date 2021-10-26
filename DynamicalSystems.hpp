@@ -71,8 +71,8 @@ class EuclideanHarmonicOscillator : public DynamicalSystem<double, double> {
       : _freq(omega), _mass(m) {}
    ~EuclideanHarmonicOscillator() {};
 
-   double GetFrequency() const { return _freq; }
-   double GetMass() const { return _mass; }
+   double Frequency() const { return _freq; }
+   double Mass() const { return _mass; }
 
    bool IsExactlySolvable() { return true; }
 
