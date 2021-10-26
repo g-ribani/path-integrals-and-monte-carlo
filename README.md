@@ -1,5 +1,5 @@
 # Path Integral Monte Carlo
 
 
-Path integrals and elementary lattice QCD using MonteCarlo techniques.
+Path integrals and elementary lattice QCD using Monte Carlo techniques.
 To be continued...
