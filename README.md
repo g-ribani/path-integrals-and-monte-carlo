@@ -1,1 +1,1 @@
-# path-integral-monte-carlo
+# Path Integral Monte Carlo
