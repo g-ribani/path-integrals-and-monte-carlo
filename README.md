@@ -2,4 +2,3 @@
 
 
 Path integrals and elementary lattice QCD using Monte Carlo techniques.
-To be continued...
