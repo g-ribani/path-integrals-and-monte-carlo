@@ -8,9 +8,8 @@
 #define USE_ITERATORS
 
 // returns a linearly spaced vector of n points from in to fin
-std::vector<double>
-   LinearRange(double in, double fin, std::size_t n) {
-      std::vector<double> ret;
+template<class T> std::vector<T> LinearRange(T in, T fin, std::size_t n) {
+      std::vector<T> ret;
       if(n == 1) ret.push_back((in + fin)/2.); // midpoint if n == 1
       else if(n > 1) {
          const double step = (fin - in)/(n - 1);
