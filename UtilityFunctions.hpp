@@ -84,6 +84,11 @@ template<class K, class V> std::vector<V> GetValues(const std::map<K,V>& m) {
    return v;
 }
 
+// returns a human-readable string identifying the type of the argument
+template<class T> std::string ClassName(const T& t) {
+   return std::string( boost::core::demangle( typeid(t).name() ) );
+}
+
 #endif // UTILITY_FUNCTIONS_HPP
 
 
