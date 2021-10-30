@@ -76,67 +76,6 @@ template<class CT, class VT> class DynamicalSystem {
 
 template<class CT, class VT> DynamicalSystem<CT,VT>::~DynamicalSystem() {}
 
-template<> class DynamicalSystem<double,double> {
-   public:
-   void AddToClassicalPath(double c) {
-      _Path.insert_or_assign( c, operator()(c) );
-   }
-   void AddToPath(double c, double v) {
-      _Path.insert_or_assign(c, v);
-   }
-   std::map<double, double> ClassicalPath
-    (const std::vector<double>& C) const {
-      IsDeterministic_Assert();
-      std::map<double, double> P;
-      for(auto c : C) P.insert_or_assign(c, operator()(c) );
-      return P;
-   }
-   std::map<double, double> ClassicalPath (std::size_t nPoints) const {
-      IsDeterministic_Assert();
-      auto boundary = GetKeys(_BCs);
-      auto C = LinearRange(boundary[0], boundary[1], nPoints);
-      return ClassicalPath(C);
-   }
-   void ClearPath() { _Path.clear(); }
-   virtual ~DynamicalSystem() = 0;
-   auto GetBoundaryConditions() { return _BCs; }
-   virtual bool IsDeterministic() const = 0;
-   virtual bool IsExactlySolvable() const = 0;
-   // operator()() must be implemented to compute the classical path
-   virtual double operator()(double) const = 0;
-   std::map<double, double> Path() const { return _Path; }
-   void PrintPath
-    (const std::string& s = "", std::ostream& o = std::cout) const {
-      o << s << _Path << std::endl;
-   }
-   void SetBoundaryCondition(double c, double v) {
-      _BCs.insert_or_assign(c, v);
-   }
-   void SetClassicalPath(const std::vector<double>& C) {
-      SetPath( ClassicalPath(C) );
-   }
-   void SetClassicalPath(std::size_t nPoints) {
-      SetPath( ClassicalPath(nPoints) );
-   }
-   void SetPath(const std::map<double, double>& P) {
-      ClearPath();
-      _Path = P;
-   }
-   protected:
-   std::map<double, double> _BCs;
-   std::map<double, double> _Path;
-   void IsDeterministic_Assert() const {
-      if(!IsDeterministic()) {
-         std::string s("The motion of the object of type ");
-         s.append( ClassName(*this) )
-          .append(" cannot be determined");
-         throw DynamicalException(s);
-      }
-   }
-};
-
-DynamicalSystem<double, double>::~DynamicalSystem() {}
-
 class EuclideanHarmonicOscillator : public DynamicalSystem<double, double> {
    public:
    double Action() const {
