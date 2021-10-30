@@ -39,12 +39,6 @@ template<class CT, class VT> class DynamicalSystem {
       for(auto c : C) P.insert_or_assign(c, operator()(c) );
       return P;
    }
-   std::map<_CoordType, _ValueType> ClassicalPath (std::size_t nPoints) const {
-      IsDeterministic_Assert();
-      auto boundary = GetKeys(_BCs);
-      auto C = LinearRange( boundary[0], boundary[1], nPoints);
-      return ClassicalPath(C);
-   }
    std::string ClassName() const {
       return std::string( boost::core::demangle( typeid(*this).name() ) );
    }
@@ -54,9 +48,9 @@ template<class CT, class VT> class DynamicalSystem {
    bool HasPath() const { return !_Path.empty(); }
    virtual bool IsDeterministic() const = 0;
    virtual bool IsExactlySolvable() const = 0;
+   // operator()() must be implemented to compute the classical path
    virtual _ValueType operator()(_CoordType) const = 0;
    std::map<_CoordType, _ValueType> Path() const { return _Path; }
-   auto PathSize() const { return _Path.size(); }
    void PrintPath
     (const std::string& s = "", std::ostream& o = std::cout) const {
       o << s << _Path << std::endl;
@@ -66,9 +60,6 @@ template<class CT, class VT> class DynamicalSystem {
    }
    void SetClassicalPath(const std::vector<_CoordType>& C) {
       SetPath( ClassicalPath(C) );
-   }
-   void SetClassicalPath(std::size_t nPoints) {
-      SetPath( ClassicalPath(nPoints) );
    }
    void SetPath(const std::map<_CoordType, _ValueType>& P) {
       ClearPath();
@@ -95,8 +86,8 @@ class EuclideanHarmonicOscillator : public DynamicalSystem<double, double> {
       auto t = GetKeys(_Path);
       auto x = GetValues(_Path);
       // x[0] = x_in, x[N] = x_fin
-      std::size_t N = PathSize()-1;
-      _CoordType deltaT;
+      std::size_t N = _Path.size()-1;
+      double deltaT;
       double kineticPiece, potentialPiece, action = 0.;
       for(std::size_t k = 1; k != N+1; ++k)
          deltaT = t[k] - t[k-1],
@@ -106,6 +97,13 @@ class EuclideanHarmonicOscillator : public DynamicalSystem<double, double> {
                            *( x[k]*x[k] + x[k-1]*x[k-1] ),
          action += kineticPiece + potentialPiece;
       return action;
+   }
+   using DynamicalSystem::ClassicalPath;
+   std::map<double, double> ClassicalPath (std::size_t nPoints) const {
+      IsDeterministic_Assert();
+      auto boundary = GetKeys(_BCs);
+      auto C = LinearRange(boundary[0], boundary[1], nPoints);
+      return ClassicalPath(C);
    }
    EuclideanHarmonicOscillator(double omega = 1., double m = 1.)
     : _freq(omega), _mass(m) {
@@ -127,7 +125,7 @@ class EuclideanHarmonicOscillator : public DynamicalSystem<double, double> {
       IsDeterministic_Assert();
       auto t = GetKeys(_BCs);
       auto x = GetValues(_BCs);
-      _CoordType beta = t[1] - t[0];
+      double beta = t[1] - t[0];
       return std::sqrt( _mass/(2.*pi*beta) )
                *std::exp( -_mass*std::pow( x[1] - x[0], 2. )/(2.*beta) );
    }
@@ -135,7 +133,7 @@ class EuclideanHarmonicOscillator : public DynamicalSystem<double, double> {
    bool IsDeterministic() const { return _BCs.size() == 2; }
    bool IsExactlySolvable() const { return true; }
    double Mass() const { return _mass; }
-   _ValueType operator()(_CoordType tau) const {
+   double operator()(double tau) const {
       IsDeterministic_Assert();
       auto t = GetKeys(_BCs);
       auto x = GetValues(_BCs);
@@ -144,6 +142,10 @@ class EuclideanHarmonicOscillator : public DynamicalSystem<double, double> {
                               / std::sinh( _freq*(t[1] - t[0]) );
       // free particle if _freq == 0
       else return ( (t[1] - tau)*x[0] + (tau - t[0])*x[1] )/( t[1] - t[0] );
+   }
+   using DynamicalSystem::SetClassicalPath;
+   void SetClassicalPath(std::size_t nPoints) {
+      SetPath( ClassicalPath(nPoints) );
    }
    private:
    const double _freq;
