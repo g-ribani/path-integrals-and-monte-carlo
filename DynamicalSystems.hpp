@@ -26,11 +26,34 @@ template<class CT, class VT> class DynamicalSystem {
    public:
    typedef CT _CoordType;
    typedef VT _ValueType;
-   void AddToClassicalPath(_CoordType c) {
-      _Path.insert_or_assign( c, operator()(c) );
-   }
    void AddToPath(_CoordType c, _ValueType v) {
       _Path.insert_or_assign(c, v);
+   }
+   void ClearPath() { _Path.clear(); }
+   virtual ~DynamicalSystem() = 0;
+   // virtual bool IsExactlySolvable() const = 0;
+   std::map<_CoordType, _ValueType> Path() const { return _Path; }
+   void PrintPath
+    (const std::string& s = "", std::ostream& o = std::cout) const {
+      o << s << _Path << std::endl;
+   }
+   void SetPath(const std::map<_CoordType, _ValueType>& P) {
+      ClearPath();
+      _Path = P;
+   }
+   protected:
+   std::map<_CoordType, _ValueType> _Path;
+};
+
+template<class CT, class VT> DynamicalSystem<CT, VT>::~DynamicalSystem() {}
+
+template<class CT, class VT> class ExactDynamicalSystem :
+ public DynamicalSystem<CT, VT> {
+   public:
+   using typename DynamicalSystem<CT, VT>::_CoordType;
+   using typename DynamicalSystem<CT, VT>::_ValueType;
+   void AddToClassicalPath(_CoordType c) {
+      this->_Path.insert_or_assign( c, operator()(c) );
    }
    std::map<_CoordType, _ValueType> ClassicalPath
     (const std::vector<_CoordType>& C) const {
@@ -39,31 +62,19 @@ template<class CT, class VT> class DynamicalSystem {
       for(auto c : C) P.insert_or_assign(c, operator()(c) );
       return P;
    }
-   void ClearPath() { _Path.clear(); }
-   virtual ~DynamicalSystem() = 0;
    auto GetBoundaryConditions() { return _BCs; }
+   // checks if boundary conditions uniquely determine the classical path
    virtual bool IsDeterministic() const = 0;
-   virtual bool IsExactlySolvable() const = 0;
-   // operator()() must be implemented to compute the classical path
+   // computes the classical path
    virtual _ValueType operator()(_CoordType) const = 0;
-   std::map<_CoordType, _ValueType> Path() const { return _Path; }
-   void PrintPath
-    (const std::string& s = "", std::ostream& o = std::cout) const {
-      o << s << _Path << std::endl;
-   }
    void SetBoundaryCondition(_CoordType c, _ValueType v) {
       _BCs.insert_or_assign(c, v);
    }
    void SetClassicalPath(const std::vector<_CoordType>& C) {
       SetPath( ClassicalPath(C) );
    }
-   void SetPath(const std::map<_CoordType, _ValueType>& P) {
-      ClearPath();
-      _Path = P;
-   }
    protected:
    std::map<_CoordType, _ValueType> _BCs;
-   std::map<_CoordType, _ValueType> _Path;
    void IsDeterministic_Assert() const {
       if(!IsDeterministic()) {
          std::string s("The motion of the object of type ");
@@ -74,11 +85,16 @@ template<class CT, class VT> class DynamicalSystem {
    }
 };
 
-template<class CT, class VT> DynamicalSystem<CT,VT>::~DynamicalSystem() {}
-
-class EuclideanHarmonicOscillator : public DynamicalSystem<double, double> {
+class EuclideanHarmonicOscillator :
+ public ExactDynamicalSystem<double, double> {
    public:
    double Action() const {
+      if(_Path.size() < 2) {
+         std::string s(ClassName(*this));
+         s.append(" does not have a discretized path "
+                  "suitable to compute the action");
+         throw DynamicalException(s);
+      }
       auto t = GetKeys(_Path);
       auto x = GetValues(_Path);
       // x[0] = x_in, x[N] = x_fin
@@ -109,18 +125,14 @@ class EuclideanHarmonicOscillator : public DynamicalSystem<double, double> {
                      << " with zero frequency\n";
    }
    ~EuclideanHarmonicOscillator() {};
-   double ExactAmplitude() {
+   double ExactAmplitude(double xin, double xfin, double beta) const {
       static constexpr double pi = std::acos(-1.);
-      IsDeterministic_Assert();
-      auto t = GetKeys(_BCs);
-      auto x = GetValues(_BCs);
-      double beta = t[1] - t[0];
       return std::sqrt( _mass/(2.*pi*beta) )
-               *std::exp( -_mass*std::pow( x[1] - x[0], 2. )/(2.*beta) );
+               *std::exp( -_mass*std::pow( xfin - xin, 2. )/(2.*beta) );
    }
    double Frequency() const { return _freq; }
    bool IsDeterministic() const { return _BCs.size() == 2; }
-   bool IsExactlySolvable() const { return true; }
+   // bool IsExactlySolvable() const { return true; }
    double Mass() const { return _mass; }
    double operator()(double tau) const {
       IsDeterministic_Assert();
