@@ -5,7 +5,7 @@ Path integrals and elementary lattice QCD using Monte Carlo techniques.
 
 ### CONTENTS
 
-`UtilityFunctions.hpp` contains a handful of functions which help manipulate and print std containers
+`UtilityFunctions.hpp` contains a handful of functions which help handle and print std containers.
 
 `DynamicalSystems.hpp` contains definitions of types suited to represent (a limited class of) classical dynamical systems.
 
