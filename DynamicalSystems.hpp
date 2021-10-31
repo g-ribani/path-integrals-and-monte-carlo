@@ -8,15 +8,20 @@
 #include <string>
 #include <UtilityFunctions.hpp>
 
-class DynamicalException : public std::exception {
+template<typename, typename> class DynamicalSystem;
+
+template<class T> class DynamicalException : public std::exception {
    public:
-   DynamicalException() {};
-   DynamicalException(const std::string& s) : _explain(s) {}
-   DynamicalException(const DynamicalException&) = default;
-   DynamicalException& operator=(const DynamicalException&) = default;
-   DynamicalException(DynamicalException&&) = default;
-   DynamicalException& operator=(DynamicalException&&) = default;
-   ~DynamicalException() {};
+   // DynamicalException() {};
+   DynamicalException(T* sys, const char* s = "") noexcept : obj(sys) {
+      (_explain = ClassName(*obj)).append(": ").append(s);
+   }
+   // DynamicalException(const DynamicalException&) = default;
+   // DynamicalException& operator=(const DynamicalException&) = default;
+   // DynamicalException(DynamicalException&&) = default;
+   // DynamicalException& operator=(DynamicalException&&) = default;
+   // ~DynamicalException() {};
+   T* const obj;
    const char* what() const noexcept { return _explain.data(); }
    private:
    std::string _explain;
@@ -47,7 +52,9 @@ template<class CT, class VT> class DynamicalSystem {
 
 template<class CT, class VT> DynamicalSystem<CT, VT>::~DynamicalSystem() {}
 
-template<class CT, class VT> class ExactDynamicalSystem :
+// this is for dynamical systems for which a known exact (classical) solution
+// exists, given the appropriate boundary conditions
+template<class CT, class VT> class SolvableDynamicalSystem :
  public DynamicalSystem<CT, VT> {
    public:
    using typename DynamicalSystem<CT, VT>::_CoordType;
@@ -57,97 +64,169 @@ template<class CT, class VT> class ExactDynamicalSystem :
    }
    std::map<_CoordType, _ValueType> ClassicalPath
     (const std::vector<_CoordType>& C) const {
-      IsDeterministic_Assert();
+      // IsSolvable_Assert();
       std::map<_CoordType, _ValueType> P;
       for(auto c : C) P.insert_or_assign(c, operator()(c) );
       return P;
    }
-   auto GetBoundaryConditions() { return _BCs; }
+   void ClearBoundaryConditions() { _BCs.clear(); }
+   auto GetBoundaryConditions() const { return _BCs; }
    // checks if boundary conditions uniquely determine the classical path
-   virtual bool IsDeterministic() const = 0;
+   virtual bool IsSolvable() const = 0;
    // computes the classical path
    virtual _ValueType operator()(_CoordType) const = 0;
    void SetBoundaryCondition(_CoordType c, _ValueType v) {
       _BCs.insert_or_assign(c, v);
    }
    void SetClassicalPath(const std::vector<_CoordType>& C) {
-      SetPath( ClassicalPath(C) );
+      this->SetPath( ClassicalPath(C) );
    }
    protected:
    std::map<_CoordType, _ValueType> _BCs;
-   void IsDeterministic_Assert() const {
-      if(!IsDeterministic()) {
-         std::string s("The motion of the object of type ");
-         s.append( ClassName(*this) )
-          .append(" cannot be determined");
-         throw DynamicalException(s);
-      }
+   void IsSolvable_Assert() const {
+      if(!IsSolvable())
+         throw DynamicalException(this, "cannot compute the classical path");
    }
 };
 
-class EuclideanHarmonicOscillator :
- public ExactDynamicalSystem<double, double> {
+// euclidean one-dimensional harmonic oscillator
+class HarmonicOscillator1D :
+ public SolvableDynamicalSystem<double, double> {
    public:
-   double Action() const {
-      if(_Path.size() < 2) {
-         std::string s(ClassName(*this));
-         s.append(" does not have a discretized path "
-                  "suitable to compute the action");
-         throw DynamicalException(s);
-      }
+   double Action() const  {
+      if(_Path.size() < 2)
+         throw DynamicalException(this, "cannot compute the action");
       auto t = GetKeys(_Path);
       auto x = GetValues(_Path);
       // x[0] = x_in, x[N] = x_fin
       std::size_t N = _Path.size()-1;
-      double deltaT;
-      double kineticPiece, potentialPiece, action = 0.;
-      for(std::size_t k = 1; k != N+1; ++k)
-         deltaT = t[k] - t[k-1],
-         kineticPiece =
-            _mass/(2.*deltaT)*std::pow(x[k] - x[k-1], 2.),
-         potentialPiece = deltaT*_mass*_freq*_freq/4.
-                           *( x[k]*x[k] + x[k-1]*x[k-1] ),
-         action += kineticPiece + potentialPiece;
+      double action = 0.;
+      for(std::size_t k = 1; k != N+1; ++k) {
+         double deltaT = t[k] - t[k-1],
+                deltaX = x[k] - x[k-1];
+         action += _mass/2.*deltaX*deltaX/deltaT
+                   + deltaT*_mass*_freq*_freq/4.*( x[k]*x[k] + x[k-1]*x[k-1] );
+      }
       return action;
    }
-   EuclideanHarmonicOscillator(double omega = 1., double m = 1.)
+   HarmonicOscillator1D(double m = 1., double omega = 1.)
     : _freq(omega), _mass(m) {
-      if(m <= 0.) {
-         std::string s;
-         s.append("Cannot istantiate an object of type ")
-          .append( ClassName(*this) )
-          .append(" with non positive mass");
-         throw DynamicalException(s);
-      }
-      if(omega == 0.)
-         std::clog << "Warning: istantiating an object of type "
-                     << ClassName(*this)
-                     << " with zero frequency\n";
+      if(m <= 0. or omega <= 0.)
+         throw DynamicalException(this, "must have positive mass "
+                                          "and positive frequency");
    }
-   ~EuclideanHarmonicOscillator() {};
-   double ExactAmplitude(double xin, double xfin, double beta) const {
+   // ~HarmonicOscillator1D() {};
+   double ExactAmplitude() const {
+      IsSolvable_Assert();
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
+      double deltaT = t[1] - t[0], deltaX = x[1] - x[0];
       static constexpr double pi = std::acos(-1.);
-      return std::sqrt( _mass/(2.*pi*beta) )
-               *std::exp( -_mass*std::pow( xfin - xin, 2. )/(2.*beta) );
+      return std::sqrt( _mass/(2.*pi*deltaT) )
+         *std::exp( -_mass*deltaX*deltaX/(2.*deltaT) );
    }
    double Frequency() const { return _freq; }
-   bool IsDeterministic() const { return _BCs.size() == 2; }
+   bool IsSolvable() const { return _BCs.size() == 2; }
    // bool IsExactlySolvable() const { return true; }
    double Mass() const { return _mass; }
    double operator()(double tau) const {
-      IsDeterministic_Assert();
+      IsSolvable_Assert();
       auto t = GetKeys(_BCs);
       auto x = GetValues(_BCs);
       if(_freq != 0.) return ( std::sinh( _freq*(t[1] - tau) )*x[0]
                               + std::sinh( _freq*(tau - t[0]) )*x[1] )
                               / std::sinh( _freq*(t[1] - t[0]) );
       // free particle if _freq == 0
-      else return ( (t[1] - tau)*x[0] + (tau - t[0])*x[1] )/( t[1] - t[0] );
+      // else return ( (t[1] - tau)*x[0] + (tau - t[0])*x[1] )/( t[1] - t[0] );
    }
    private:
    const double _freq;
    const double _mass;
 };
+
+// euclidean one-dimensional free particle
+class FreeParticle1D :
+ public SolvableDynamicalSystem<double, double> {
+   public:
+   double Action() const  {
+      if(_Path.size() < 2)
+         throw DynamicalException(this, "cannot compute the action");
+      auto t = GetKeys(_Path);
+      auto x = GetValues(_Path);
+      // x[0] = x_in, x[N] = x_fin
+      std::size_t N = _Path.size()-1;
+      double action = 0.;
+      for(std::size_t k = 1; k != N+1; ++k) {
+         double deltaT = t[k] - t[k-1],
+                deltaX = x[k] - x[k-1];
+         action += _mass/2.*deltaX*deltaX/deltaT;
+      }
+      return action;
+   }
+   FreeParticle1D(double m = 1.) : _mass(m) {
+      if(m <= 0.) throw DynamicalException(this, "must have positive mass");
+   }
+   // ~FreeParticle1D() {};
+   double ExactAmplitude() const {
+      IsSolvable_Assert();
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
+      double deltaT = t[1] - t[0], deltaX = x[1] - x[0];
+      static constexpr double pi = std::acos(-1.);
+      return std::sqrt( _mass/(2.*pi*deltaT) )
+         *std::exp( -_mass*deltaX*deltaX/(2.*deltaT) );
+   }
+   bool IsSolvable() const { return _BCs.size() == 2; }
+   // bool IsExactlySolvable() const { return true; }
+   double Mass() const { return _mass; }
+   double operator()(double tau) const {
+      IsSolvable_Assert();
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
+      return ( (t[1] - tau)*x[0] + (tau - t[0])*x[1] )/( t[1] - t[0] );
+   }
+   private:
+   const double _mass;
+};
+
+// // euclidean nDim-dimensional free particle
+// template<size_t nDim> class EuclidFreeParticleND
+//  : public SolvableDynamicalSystem<double, std::array<nDim, double>> {
+// };
+
+// template<class V> class Particle1D : public DynamicalSystem<double, double> {
+//    public:
+//    Particle1D(double m = 1., const V& pot = [](double x){ return 0.; }) :
+//       _mass(m), _Potential(pot) {}
+//    double Action() {
+//       if(this->_Path.size() < 2)
+//          throw DynamicalException(this, "cannot compute the action");
+//       auto t = GetKeys(this->_Path);
+//       auto x = GetValues(this->_Path);
+//       // x[0] = x_in, x[N] = x_fin
+//       std::size_t N = this->_Path.size()-1;
+//       double action = 0.;
+//       for(std::size_t k = 1; k != N+1; ++k) {
+//          double deltaT = t[k] - t[k-1],
+//                 deltaX = x[k] - x[k-1];
+//          action += _mass/2.*deltaX*deltaX/deltaT
+//                    + deltaT/2.*( _Potential(x[k]) + _Potential(x[k-1]) );
+//       }
+//       return action;
+//    }
+//    void SetMass(double m) { _mass = m; }
+//    void SetPotential(const V& pot) { _Potential = pot; }
+//    protected:
+//    double _mass;
+//    V _Potential;
+// };
+//
+// template<class V> class EuclideanHarmonicOscillator : public Particle1D<V> {
+//    public:
+//    EuclideanHarmonicOscillator(double mass =1., double freq = 1.)
+//     : Particle1D(mass, [mass, freq](double x){ return mass*freq*freq*x*x/2.; } )
+//      {}
+// };
 
 #endif // DYNAMICAL_SYSTEMS_HPP
 

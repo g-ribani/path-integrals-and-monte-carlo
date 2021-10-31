@@ -2,6 +2,7 @@
 #define UTILITY_FUNCTIONS_HPP
 #include <array>
 #include <map>
+#include <cfloat>
 #include <ostream>
 #include <utility>
 #include <vector>
@@ -19,8 +20,6 @@ std::vector<double> LinearRange(double in, double fin, std::size_t n) {
 }
 
 // returns a vector of doubles from in up to (at most) fin spaced by step
-// Warning: the final point is not guaranteed to be in the range, even if
-// mathematically it would be so, because of machine error.
 std::vector<double> StepRange(double in, double fin, double step) {
    std::vector<double> ret;
    if(in == fin) ret.push_back(in);
