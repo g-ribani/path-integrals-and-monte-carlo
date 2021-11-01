@@ -2,7 +2,6 @@
 #define UTILITY_FUNCTIONS_HPP
 #include <array>
 #include <map>
-#include <cfloat>
 #include <ostream>
 #include <utility>
 #include <vector>
@@ -33,41 +32,43 @@ std::vector<double> StepRange(double in, double fin, double step) {
 
 // writes an std::array on an std::ostream
 template<class T, std::size_t N> std::ostream& operator <<
-   (std::ostream& o, const std::array<T,N>& a) {
+   (std::ostream& os, const std::array<T,N>& a) {
       auto it = a.begin();
-      o << '(';
+      os << '(';
       if(it != a.end()) {
-         for(; it != a.end()-1; ++it) o << *it << ", ";
-         o << *it;
+         for(; it != a.end()-1; ++it) os << *it << ", ";
+         os << *it;
       }
-      return o << ')';
+      return os << ')';
 }
 
 // writes an std::vector on an std::ostream
 template<class T> std::ostream& operator <<
-   (std::ostream& o, const std::vector<T>& v) {
+   (std::ostream& os, const std::vector<T>& v) {
       auto it = v.begin();
-      o << '(';
+      os << '(';
       if(it != v.end()) {
-         for(; it != v.end()-1; ++it) o << *it << ", ";
-         o << *it;
+         for(; it != v.end()-1; ++it) os << *it << ", ";
+         os << *it;
       }
-      return o << ')';
+      return os << ')';
 }
 
 // writes an std::pair on an std::ostream
 template<class T1, class T2> std::ostream& operator <<
-   (std::ostream& o, const std::pair<T1,T2>& p) {
-      return o << '(' << std::get<0>(p) << ", " << std::get<1>(p) << ')';
+   (std::ostream& os, const std::pair<T1,T2>& p) {
+      return os << '(' << std::get<0>(p) << ", " << std::get<1>(p) << ')';
 }
 
 // writes an std::map on an std::ostream
 template<class K, class T> std::ostream& operator <<
-   (std::ostream& o, const std::map<K,T>& m) {
-      o << "{ ";
-      for(auto p : m) o << p << ' ';
-      return o << '}';
+   (std::ostream& os, const std::map<K,T>& m) {
+      os << "{ ";
+      for(auto p : m) os << p << ' ';
+      return os << '}';
 }
+
+// template<Types...> std::ostream& operator << (std::ostream&, const std::tuple<Types...>&);   // implement this
 
 // obtains the vector of keys from an std::map
 template<class K, class V> std::vector<K> GetKeys(const std::map<K,V>& m) {
