@@ -9,12 +9,10 @@
 #include <tuple>
 #include <UtilityFunctions.hpp>
 
-template<typename, typename> class DynamicalSystem;
-
 template<class T> class DynamicalException : public std::exception {
    public:
    DynamicalException(T* sys, const char* s = "") noexcept : obj(sys) {
-      (_explain = ClassName(*obj)).append(": ").append(s);
+      (_explain = ClassName(*sys)).append(": ").append(s);
    }
    T* const obj;
    const char* what() const noexcept { return _explain.data(); }
@@ -29,9 +27,7 @@ template<class CT, class VT> class DynamicalSystem {
    void ClearPath() { _Path.clear(); }
    virtual ~DynamicalSystem() = 0;
    std::map<_CoordType, _ValueType> Path() const { return _Path; }
-   void PrintPath(std::ostream& os = std::cout) const {
-      os << _Path << '\n';
-   }
+   void PrintPath(std::ostream& os = std::cout) const { os << _Path << '\n'; }
    void SetPath(const std::map<_CoordType, _ValueType>& P) { _Path = P; }
    protected:
    std::map<_CoordType, _ValueType> _Path;
@@ -43,14 +39,15 @@ template<class CT, class VT> DynamicalSystem<CT, VT>::~DynamicalSystem() {}
 class FreeParticle1D : public DynamicalSystem<double, double> {
    public:
    double Action() const  {
-      if(_Path.size() < 2) Throw("need at least 2 points in the path "
+      auto pathSize = _Path.size();
+      if(pathSize < 2) Throw("need at least 2 points in the path "
                                   "to compute the action");
       auto t = GetKeys(_Path);
       auto x = GetValues(_Path);
       // x[0] = x_in, x[N] = x_fin
-      std::size_t N = _Path.size()-1;
+      std::vector<double>::size_type N = pathSize-1;
       double action = 0.;
-      for(std::size_t k = 1; k != N+1; ++k) {
+      for(std::vector<double>::size_type k = 1; k != N+1; ++k) {
          double deltaT = t[k] - t[k-1],
                 deltaX = x[k] - x[k-1];
          action += _mass/2.*deltaX*deltaX/deltaT;
@@ -62,8 +59,8 @@ class FreeParticle1D : public DynamicalSystem<double, double> {
    }
    double At(double tau, bool scheckIfSolvable = true) const {
       if(scheckIfSolvable and _BCs.size() != 2)
-         throw DynamicalException(this, "need exactly 2 boundary conditions "
-                                          "to compute the classical path");
+         Throw("need exactly 2 boundary conditions "
+                "to compute the classical path");
       auto t = GetKeys(_BCs);
       auto x = GetValues(_BCs);
       return ( (t[1] - tau)*x[0] + (tau - t[0])*x[1] )/( t[1] - t[0] );
@@ -83,11 +80,8 @@ class FreeParticle1D : public DynamicalSystem<double, double> {
    FreeParticle1D(double mass = 1.) : _mass(mass) {
       if(mass <= 0.) Throw("must have positive mass");
    }
-   auto GetBoundaryConditions() const { return _BCs; }
+   auto BoundaryConditions() const { return _BCs; }
    double Mass() const { return _mass; }
-   void SetBoundaryConditions(const std::map<_CoordType, _ValueType>& conds) {
-      _BCs = conds;
-   }
    void SetClassicalPath(double step) {
       if(_BCs.size() != 2) Throw("need exactly 2 boundary conditions "
                                   "to compute the classical path");
@@ -100,7 +94,7 @@ class FreeParticle1D : public DynamicalSystem<double, double> {
    }
    private:
    void Throw(const char* why) const { throw DynamicalException(this, why); }
-   std::map<_CoordType, _ValueType> _BCs;
+   std::map<double, double> _BCs;
    const double _mass;
 };
 
@@ -119,9 +113,9 @@ class HarmonicOscillator1D : public DynamicalSystem<double, double> {
       auto t = GetKeys(_Path);
       auto x = GetValues(_Path);
       // x[0] = x_in, x[N] = x_fin
-      std::size_t N = pathSize - 1;
+      std::vector<double>::size_type N = pathSize - 1;
       double action = 0.;
-      for(std::size_t k = 1; k != N+1; ++k) {
+      for(std::vector<double>::size_type k = 1; k != N+1; ++k) {
          double deltaT = t[k] - t[k-1],
                 deltaX = x[k] - x[k-1];
          action += _mass/2.*deltaX*deltaX/deltaT
@@ -160,11 +154,8 @@ class HarmonicOscillator1D : public DynamicalSystem<double, double> {
          *std::exp( -_mass*deltaX*deltaX/(2.*deltaT) ); // check the formula!
    }
    double Frequency() const { return _freq; }
-   auto GetBoundaryConditions() const { return _BCs; }
+   auto BoundaryConditions() const { return _BCs; }
    double Mass() const { return _mass; }
-   void SetBoundaryConditions(const std::map<_CoordType, _ValueType>& conds) {
-      _BCs = conds;
-   }
    void SetClassicalPath(double step) {
       if(_BCs.size() != 2) Throw("need exactly 2 boundary conditions "
                                   "to compute the classical path");
@@ -177,24 +168,25 @@ class HarmonicOscillator1D : public DynamicalSystem<double, double> {
    }
    private:
    void Throw(const char* why) const { throw DynamicalException(this, why); }
-   std::map<_CoordType, _ValueType> _BCs;
+   std::map<double, double> _BCs;
    const double _freq;
    const double _mass;
 };
 
+// euclidean one-dimensional particle in a potential
 template<class Potential> class Particle1D :
  public DynamicalSystem<double, double> {
    public:
-   double Action() {
+   double Action() const {
       auto pathSize = this->_Path.size();
       if(pathSize < 2) Throw("need at least 2 points in the path "
                               "to compute the action");
       auto t = GetKeys(this->_Path);
       auto x = GetValues(this->_Path);
       // x[0] = x_in, x[N] = x_fin
-      std::size_t N = pathSize - 1;
+      std::vector<double>::size_type N = pathSize - 1;
       double action = 0.;
-      for(std::size_t k = 1; k != N+1; ++k) {
+      for(std::vector<double>::size_type k = 1; k != N+1; ++k) {
          double deltaT = t[k] - t[k-1],
                 deltaX = x[k] - x[k-1];
          action += _mass/2.*deltaX*deltaX/deltaT
@@ -207,19 +199,16 @@ template<class Potential> class Particle1D :
    }
    void ClearBoundaryConditions() { _BCs.clear(); }
    // void SetClassicalPath(double epsi); // to be implemented
-   auto GetBoundaryConditions() const { return _BCs; }
+   auto BoundaryConditions() const { return _BCs; }
    double Mass() const { return _mass; }
    Particle1D(double mass = 1.,
     const Potential& pot = [](double){ return 0.; }) :
      _mass(mass), _potential(pot) {
             if(mass <= 0.) Throw("must have positive mass");
    }
-   void SetBoundaryConditions(const std::map<_CoordType, _ValueType>& conds) {
-      _BCs = conds;
-   }
    private:
    void Throw(const char* why) const { throw DynamicalException(this, why); }
-   std::map<_CoordType, _ValueType> _BCs;
+   std::map<double, double> _BCs;
    const double _mass;
    const Potential _potential;
 };
