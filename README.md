@@ -16,7 +16,7 @@ For the moment, the following classes are defined:
 - `HarmonicOscillator1D`
 - `Particle1D`
 
-Methods are implemented to set paths in euclidean coordinate space, to fix boundary conditions and to compute the classical motion. If the action is defined, a discretized version can be computed on the given path, for use in the path integral.
+Methods are implemented to set paths in euclidean coordinate space, to fix boundary conditions and to compute the classical motion (for the moment, only for free particle and harmonic oscillator). If the action is defined, a discretized version can be computed on the given path, for use in the path integral. The exact Feynman amplitude whenever it is known.
 
 The project is still at the early stage...
 
