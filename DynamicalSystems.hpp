@@ -147,11 +147,12 @@ class HarmonicOscillator1D : public DynamicalSystem<double, double> {
                                   "to compute the amplitude");
       auto t = GetKeys(_BCs);
       auto x = GetValues(_BCs);
-      double deltaT = t[1] - t[0],
-             deltaX = x[1] - x[0];
+      double deltaT = t[1] - t[0];
       static constexpr double pi = std::acos(-1.);
       return std::sqrt( _mass/(2.*pi*deltaT) )
-         *std::exp( -_mass*deltaX*deltaX/(2.*deltaT) ); // check the formula!
+         *std::exp( -_mass*_freq/2.
+                     *( (x[0]*x[0] + x[1]*x[1])/std::tanh(_freq*deltaT)
+                        - 2*x[0]*x[1]/std::sinh(_freq*deltaT) ) );
    }
    double Frequency() const { return _freq; }
    auto BoundaryConditions() const { return _BCs; }
