@@ -6,17 +6,15 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <tuple>
 #include <UtilityFunctions.hpp>
 
-class DynamicalException : public std::exception {
+template<class T> class DynamicalException : public std::exception {
    public:
-   DynamicalException() {};
-   DynamicalException(const std::string& s) : _explain(s) {}
-   DynamicalException(const DynamicalException&) = default;
-   DynamicalException& operator=(const DynamicalException&) = default;
-   DynamicalException(DynamicalException&&) = default;
-   DynamicalException& operator=(DynamicalException&&) = default;
-   ~DynamicalException() {};
+   DynamicalException(T* sys, const char* s = "") noexcept : obj(sys) {
+      (_explain = ClassName(*sys)).append(": ").append(s);
+   }
+   T* const obj;
    const char* what() const noexcept { return _explain.data(); }
    private:
    std::string _explain;
@@ -26,115 +24,194 @@ template<class CT, class VT> class DynamicalSystem {
    public:
    typedef CT _CoordType;
    typedef VT _ValueType;
-   void AddToClassicalPath(_CoordType c) {
-      _Path.insert_or_assign( c, operator()(c) );
-   }
-   void AddToPath(_CoordType c, _ValueType v) {
-      _Path.insert_or_assign(c, v);
-   }
-   std::map<_CoordType, _ValueType> ClassicalPath
-    (const std::vector<_CoordType>& C) const {
-      IsDeterministic_Assert();
-      std::map<_CoordType, _ValueType> P;
-      for(auto c : C) P.insert_or_assign(c, operator()(c) );
-      return P;
-   }
    void ClearPath() { _Path.clear(); }
    virtual ~DynamicalSystem() = 0;
-   auto GetBoundaryConditions() { return _BCs; }
-   virtual bool IsDeterministic() const = 0;
-   virtual bool IsExactlySolvable() const = 0;
-   // operator()() must be implemented to compute the classical path
-   virtual _ValueType operator()(_CoordType) const = 0;
    std::map<_CoordType, _ValueType> Path() const { return _Path; }
-   void PrintPath
-    (const std::string& s = "", std::ostream& o = std::cout) const {
-      o << s << _Path << std::endl;
-   }
-   void SetBoundaryCondition(_CoordType c, _ValueType v) {
-      _BCs.insert_or_assign(c, v);
-   }
-   void SetClassicalPath(const std::vector<_CoordType>& C) {
-      SetPath( ClassicalPath(C) );
-   }
-   void SetPath(const std::map<_CoordType, _ValueType>& P) {
-      ClearPath();
-      _Path = P;
-   }
+   void PrintPath(std::ostream& os = std::cout) const { os << _Path << '\n'; }
+   void SetPath(const std::map<_CoordType, _ValueType>& P) { _Path = P; }
    protected:
-   std::map<_CoordType, _ValueType> _BCs;
    std::map<_CoordType, _ValueType> _Path;
-   void IsDeterministic_Assert() const {
-      if(!IsDeterministic()) {
-         std::string s("The motion of the object of type ");
-         s.append( ClassName(*this) )
-          .append(" cannot be determined");
-         throw DynamicalException(s);
-      }
-   }
 };
 
-template<class CT, class VT> DynamicalSystem<CT,VT>::~DynamicalSystem() {}
+template<class CT, class VT> DynamicalSystem<CT, VT>::~DynamicalSystem() {}
 
-class EuclideanHarmonicOscillator : public DynamicalSystem<double, double> {
+// euclidean one-dimensional free particle:
+class FreeParticle1D : public DynamicalSystem<double, double> {
    public:
-   double Action() const {
+   double Action() const  {
+      auto pathSize = _Path.size();
+      if(pathSize < 2) Throw("need at least 2 points in the path "
+                                  "to compute the action");
       auto t = GetKeys(_Path);
       auto x = GetValues(_Path);
       // x[0] = x_in, x[N] = x_fin
-      std::size_t N = _Path.size()-1;
-      double deltaT;
-      double kineticPiece, potentialPiece, action = 0.;
-      for(std::size_t k = 1; k != N+1; ++k)
-         deltaT = t[k] - t[k-1],
-         kineticPiece =
-            _mass/(2.*deltaT)*std::pow(x[k] - x[k-1], 2.),
-         potentialPiece = deltaT*_mass*_freq*_freq/4.
-                           *( x[k]*x[k] + x[k-1]*x[k-1] ),
-         action += kineticPiece + potentialPiece;
+      std::vector<double>::size_type N = pathSize-1;
+      double action = 0.;
+      for(std::vector<double>::size_type k = 1; k != N+1; ++k) {
+         double deltaT = t[k] - t[k-1],
+                deltaX = x[k] - x[k-1];
+         action += _mass/2.*deltaX*deltaX/deltaT;
+      }
       return action;
    }
-   EuclideanHarmonicOscillator(double omega = 1., double m = 1.)
-    : _freq(omega), _mass(m) {
-      if(m <= 0.) {
-         std::string s;
-         s.append("Cannot istantiate an object of type ")
-          .append( ClassName(*this) )
-          .append(" with non positive mass");
-         throw DynamicalException(s);
-      }
-      if(omega == 0.)
-         std::clog << "Warning: istantiating an object of type "
-                     << ClassName(*this)
-                     << " with zero frequency\n";
+   void AddBoundaryCondition(double t, double x) {
+      _BCs.insert_or_assign(t, x);
    }
-   ~EuclideanHarmonicOscillator() {};
-   double ExactAmplitude() {
+   double At(double tau, bool scheckIfSolvable = true) const {
+      if(scheckIfSolvable and _BCs.size() != 2)
+         Throw("need exactly 2 boundary conditions "
+                "to compute the classical path");
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
+      return ( (t[1] - tau)*x[0] + (tau - t[0])*x[1] )/( t[1] - t[0] );
+   }
+   void ClearBoundaryConditions() { _BCs.clear(); }
+   double ExactAmplitude() const {
+      if(_BCs.size() != 2) Throw("need exactly 2 boundary conditions "
+                                  "to compute the amplitude");
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
+      double deltaT = t[1] - t[0],
+             deltaX = x[1] - x[0];
       static constexpr double pi = std::acos(-1.);
-      IsDeterministic_Assert();
-      auto t = GetKeys(_BCs);
-      auto x = GetValues(_BCs);
-      double beta = t[1] - t[0];
-      return std::sqrt( _mass/(2.*pi*beta) )
-               *std::exp( -_mass*std::pow( x[1] - x[0], 2. )/(2.*beta) );
+      return std::sqrt( _mass/(2.*pi*deltaT) )
+         *std::exp( -_mass*deltaX*deltaX/(2.*deltaT) );
    }
-   double Frequency() const { return _freq; }
-   bool IsDeterministic() const { return _BCs.size() == 2; }
-   bool IsExactlySolvable() const { return true; }
+   FreeParticle1D(double mass = 1.) : _mass(mass) {
+      if(mass <= 0.) Throw("must have positive mass");
+   }
+   auto BoundaryConditions() const { return _BCs; }
    double Mass() const { return _mass; }
-   double operator()(double tau) const {
-      IsDeterministic_Assert();
+   void SetClassicalPath(double step) {
+      if(_BCs.size() != 2) Throw("need exactly 2 boundary conditions "
+                                  "to compute the classical path");
+      // boundary conditions are included in the classical path:
+      std::map<_CoordType, _ValueType> path = _BCs;
       auto t = GetKeys(_BCs);
-      auto x = GetValues(_BCs);
-      if(_freq != 0.) return ( std::sinh( _freq*(t[1] - tau) )*x[0]
-                              + std::sinh( _freq*(tau - t[0]) )*x[1] )
-                              / std::sinh( _freq*(t[1] - t[0]) );
-      // free particle if _freq == 0
-      else return ( (t[1] - tau)*x[0] + (tau - t[0])*x[1] )/( t[1] - t[0] );
+      for(double tau = t[0] + step; tau < t[1]; tau += step)
+         path.insert_or_assign(tau, this->At(tau, false));
+      SetPath(path);
    }
    private:
+   void Throw(const char* why) const { throw DynamicalException(this, why); }
+   std::map<double, double> _BCs;
+   const double _mass;
+};
+
+// // euclidean nDim-dimensional free particle
+// template<size_t nDim> class EuclidFreeParticleND
+//  : public DynamicalSystem<double, std::array<nDim, double>> {
+// };
+
+// euclidean one-dimensional harmonic oscillator:
+class HarmonicOscillator1D : public DynamicalSystem<double, double> {
+   public:
+   double Action() const  {
+      auto pathSize = _Path.size();
+      if(pathSize < 2) Throw("need at least 2 points in the path "
+                              "to compute the action");
+      auto t = GetKeys(_Path);
+      auto x = GetValues(_Path);
+      // x[0] = x_in, x[N] = x_fin
+      std::vector<double>::size_type N = pathSize - 1;
+      double action = 0.;
+      for(std::vector<double>::size_type k = 1; k != N+1; ++k) {
+         double deltaT = t[k] - t[k-1],
+                deltaX = x[k] - x[k-1];
+         action += _mass/2.*deltaX*deltaX/deltaT
+                   + deltaT*_mass*_freq*_freq/4.*( x[k]*x[k] + x[k-1]*x[k-1] );
+      }
+      return action;
+   }
+   void AddBoundaryCondition(double t, double x) {
+      _BCs.insert_or_assign(t, x);
+   }
+   double At(double tau, bool scheckIfSolvable = true) const {
+      if(scheckIfSolvable and _BCs.size() != 2)
+         Throw("need exactly 2 boundary conditions "
+                "to compute the classical path");
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
+      return ( std::sinh( _freq*(t[1] - tau) )*x[0]
+                              + std::sinh( _freq*(tau - t[0]) )*x[1] )
+                              / std::sinh( _freq*(t[1] - t[0]) );
+   }
+   void ClearBoundaryConditions() { _BCs.clear(); }
+   HarmonicOscillator1D(double mass = 1., double freq = 1.)
+    : _freq(freq), _mass(mass) {
+      if(mass <= 0. or freq <= 0.) Throw("must have positive mass "
+                                        "and positive frequency");
+   }
+   double ExactAmplitude() const {
+      if(_BCs.size() != 2) Throw("need exactly 2 boundary conditions "
+                                  "to compute the amplitude");
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
+      double deltaT = t[1] - t[0];
+      static constexpr double pi = std::acos(-1.);
+      return std::sqrt( _mass/(2.*pi*deltaT) )
+         *std::exp( -_mass*_freq/2.
+                     *( (x[0]*x[0] + x[1]*x[1])/std::tanh(_freq*deltaT)
+                        - 2*x[0]*x[1]/std::sinh(_freq*deltaT) ) );
+   }
+   double Frequency() const { return _freq; }
+   auto BoundaryConditions() const { return _BCs; }
+   double Mass() const { return _mass; }
+   void SetClassicalPath(double step) {
+      if(_BCs.size() != 2) Throw("need exactly 2 boundary conditions "
+                                  "to compute the classical path");
+      // boundary conditions are included in the classical path:
+      std::map<_CoordType, _ValueType> path = _BCs;
+      auto t = GetKeys(_BCs);
+      for(double tau = t[0] + step; tau < t[1]; tau += step)
+         path.insert_or_assign(tau, this->At(tau, false));
+      SetPath(path);
+   }
+   private:
+   void Throw(const char* why) const { throw DynamicalException(this, why); }
+   std::map<double, double> _BCs;
    const double _freq;
    const double _mass;
+};
+
+// euclidean one-dimensional particle in a potential
+template<class Potential> class Particle1D :
+ public DynamicalSystem<double, double> {
+   public:
+   double Action() const {
+      auto pathSize = this->_Path.size();
+      if(pathSize < 2) Throw("need at least 2 points in the path "
+                              "to compute the action");
+      auto t = GetKeys(this->_Path);
+      auto x = GetValues(this->_Path);
+      // x[0] = x_in, x[N] = x_fin
+      std::vector<double>::size_type N = pathSize - 1;
+      double action = 0.;
+      for(std::vector<double>::size_type k = 1; k != N+1; ++k) {
+         double deltaT = t[k] - t[k-1],
+                deltaX = x[k] - x[k-1];
+         action += _mass/2.*deltaX*deltaX/deltaT
+                   + deltaT/2.*( _potential(x[k]) + _potential(x[k-1]) );
+      }
+      return action;
+   }
+   void AddBoundaryCondition(double t, double x) {
+      _BCs.insert_or_assign(t, x);
+   }
+   void ClearBoundaryConditions() { _BCs.clear(); }
+   // void SetClassicalPath(double epsi); // to be implemented
+   auto BoundaryConditions() const { return _BCs; }
+   double Mass() const { return _mass; }
+   Particle1D(double mass = 1.,
+    const Potential& pot = [](double){ return 0.; }) :
+     _mass(mass), _potential(pot) {
+            if(mass <= 0.) Throw("must have positive mass");
+   }
+   private:
+   void Throw(const char* why) const { throw DynamicalException(this, why); }
+   std::map<double, double> _BCs;
+   const double _mass;
+   const Potential _potential;
 };
 
 #endif // DYNAMICAL_SYSTEMS_HPP

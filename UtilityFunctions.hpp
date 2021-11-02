@@ -19,8 +19,6 @@ std::vector<double> LinearRange(double in, double fin, std::size_t n) {
 }
 
 // returns a vector of doubles from in up to (at most) fin spaced by step
-// Warning: the final point is not guaranteed to be in the range, even if
-// mathematically it would be so, because of machine error.
 std::vector<double> StepRange(double in, double fin, double step) {
    std::vector<double> ret;
    if(in == fin) ret.push_back(in);
@@ -34,41 +32,43 @@ std::vector<double> StepRange(double in, double fin, double step) {
 
 // writes an std::array on an std::ostream
 template<class T, std::size_t N> std::ostream& operator <<
-   (std::ostream& o, const std::array<T,N>& a) {
+   (std::ostream& os, const std::array<T,N>& a) {
       auto it = a.begin();
-      o << '(';
+      os << '(';
       if(it != a.end()) {
-         for(; it != a.end()-1; ++it) o << *it << ", ";
-         o << *it;
+         for(; it != a.end()-1; ++it) os << *it << ", ";
+         os << *it;
       }
-      return o << ')';
+      return os << ')';
 }
 
 // writes an std::vector on an std::ostream
 template<class T> std::ostream& operator <<
-   (std::ostream& o, const std::vector<T>& v) {
+   (std::ostream& os, const std::vector<T>& v) {
       auto it = v.begin();
-      o << '(';
+      os << '(';
       if(it != v.end()) {
-         for(; it != v.end()-1; ++it) o << *it << ", ";
-         o << *it;
+         for(; it != v.end()-1; ++it) os << *it << ", ";
+         os << *it;
       }
-      return o << ')';
+      return os << ')';
 }
 
 // writes an std::pair on an std::ostream
 template<class T1, class T2> std::ostream& operator <<
-   (std::ostream& o, const std::pair<T1,T2>& p) {
-      return o << '(' << std::get<0>(p) << ", " << std::get<1>(p) << ')';
+   (std::ostream& os, const std::pair<T1,T2>& p) {
+      return os << '(' << std::get<0>(p) << ", " << std::get<1>(p) << ')';
 }
 
 // writes an std::map on an std::ostream
 template<class K, class T> std::ostream& operator <<
-   (std::ostream& o, const std::map<K,T>& m) {
-      o << "{ ";
-      for(auto p : m) o << p << ' ';
-      return o << '}';
+   (std::ostream& os, const std::map<K,T>& m) {
+      os << "{ ";
+      for(auto p : m) os << p << ' ';
+      return os << '}';
 }
+
+// template<Types...> std::ostream& operator << (std::ostream&, const std::tuple<Types...>&);   // implement this
 
 // obtains the vector of keys from an std::map
 template<class K, class V> std::vector<K> GetKeys(const std::map<K,V>& m) {
