@@ -42,10 +42,10 @@ template<class CT, class VT> class DynamicalSystem {
       return _Path.size();
    }
    std::vector<_ValueType> PathValues() const { return GetValues(_Path); }
-   template<class Generator, class...Args> void SetUserPath
-    (const std::vector<_CoordType>& coords, Generator& gen, Args...args) {
+   template<class Function, class...Args> void SetUserPath
+    (const std::vector<_CoordType>& coords, Function& func, Args...args) {
       ClearPath();
-      for(auto t : coords) AddToPath(t, gen(args...));
+      for(auto t : coords) AddToPath(t, func(args...));
    }
    void SetPath(const std::map<_CoordType, _ValueType>& P) { _Path = P; }
    virtual void Throw(const char* why) const {
@@ -77,21 +77,21 @@ template<> class DynamicalSystem<double, double> {
    void ClearPath() { _Path.clear(); }
    virtual ~DynamicalSystem() {}
    std::map<double, double> Path() const { return _Path; }
-   void PrintPath(std::ostream& os = std::cout) const { os << _Path << '\n'; }
+   std::vector<double> PathCoords() const { return GetKeys(_Path); }
    std::map<double, double>::size_type PathSize() const { return _Path.size(); }
+   std::vector<double> PathValues() const { return GetValues(_Path); }
+   void PrintPath(std::ostream& os = std::cout) const { os << _Path << '\n'; }
    void SetPath(const std::map<double, double>& P) { _Path = P; }
    void SetClassicalPath(double step, double epsi) {
-      // if(!IsSolvable()) Throw("cannot compute the classical path");  // ClassicalValue will do it
       if(step <= 0.) Throw("path step must be positive");
       _Path = _BCs;
       std::vector<double> t = GetKeys(_Path);
       if(PathSize() == 2) for(double tau = t[0] + step; tau < t[1]; tau += step)
          AddToPath(tau, ClassicalValue(tau, epsi));
    }
-   template<class Distribution, class Generator> void SetRandomPath
-    (double step, Distribution& distr, Generator& gen) {
-      auto func = [&distr, &gen](){ return distr(gen); };
-      SetUserPath(step, func);
+   void SetClassicalPath(const std::vector<double>& coords, double epsi) {
+      ClearPath();
+      for(auto t : coords) AddToPath( t, ClassicalValue(t, epsi) );
    }
    template<class Generator> void SetGaussianPath
     (double step, double epsi, Generator& gen, double sigma) {
@@ -101,6 +101,19 @@ template<> class DynamicalSystem<double, double> {
       std::normal_distribution gauss(0., sigma);
       if(PathSize() == 2) for(double tau = t[0] + step; tau < t[1]; tau += step)
          AddToPath( tau, ClassicalValue(tau, epsi) + gauss(gen) );
+   }
+   template<class Generator> void SetGaussianPath
+    (const std::vector<double>& coords, double epsi,
+     Generator& gen, double sigma) {
+      ClearPath();
+      std::normal_distribution gauss(0., sigma);
+      for(auto c : coords) AddToPath( c, ClassicalValue(c, epsi) + gauss(gen) );
+   }
+   template<class Distribution, class Generator> void SetRandomPath
+    (const std::vector<double>& coords,
+     Distribution& distr, Generator& gen) {
+      auto func = [&distr, &gen](){ return distr(gen); };
+      SetUserPath(coords, func);
    }
    template<class Generator, class...Args> void SetUserPath
     (double step, Generator& gen, Args...args) {
