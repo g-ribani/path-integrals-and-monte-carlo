@@ -3,8 +3,9 @@
 #include <cmath>  // std::sinh, std::tanh
 #include <boost/core/demangle.hpp>
 #include <exception>
-#include <iostream>
+#include <iostream>  // std::cout
 #include <map>
+#include <random> // std::normal_distribution
 #include <string>
 #include <UtilityFunctions.hpp>
 #include <vector>
@@ -68,8 +69,7 @@ template<> class DynamicalSystem<double, double> {
    }
    std::map<double, double> BoundaryConditions() const { return _BCs; }
    virtual bool IsSolvable() const { return false; }
-   virtual double ClassicalValue
-    (double t, double epsi, bool checkIfSolvable = true) const {
+   virtual double ClassicalValue (double t, double epsi) const {
       Throw("don't know how to solve this system");
       return 0.;
    }
@@ -80,22 +80,34 @@ template<> class DynamicalSystem<double, double> {
    void PrintPath(std::ostream& os = std::cout) const { os << _Path << '\n'; }
    std::map<double, double>::size_type PathSize() const { return _Path.size(); }
    void SetPath(const std::map<double, double>& P) { _Path = P; }
-   virtual void SetClassicalPath(double step, double epsi) {
-      if(!IsSolvable()) Throw("cannot compute the classical path");
+   void SetClassicalPath(double step, double epsi) {
+      // if(!IsSolvable()) Throw("cannot compute the classical path");  // ClassicalValue will do it
       if(step <= 0.) Throw("path step must be positive");
-      // boundary conditions are included in the classical path:
       _Path = _BCs;
       std::vector<double> t = GetKeys(_Path);
-      for(double tau = t[0] + step; tau < t[1]; tau += step)
-         AddToPath(tau, ClassicalValue(tau, epsi, false));
+      if(PathSize() == 2) for(double tau = t[0] + step; tau < t[1]; tau += step)
+         AddToPath(tau, ClassicalValue(tau, epsi));
+   }
+   template<class Distribution, class Generator> void SetRandomPath
+    (double step, Distribution& distr, Generator& gen) {
+      auto func = [&distr, &gen](){ return distr(gen); };
+      SetUserPath(step, func);
+   }
+   template<class Generator> void SetGaussianPath
+    (double step, double epsi, Generator& gen, double sigma) {
+      if(step <= 0.) Throw("path step must be positive");
+      _Path = _BCs;
+      std::vector<double> t = GetKeys(_Path);
+      std::normal_distribution gauss(0., sigma);
+      if(PathSize() == 2) for(double tau = t[0] + step; tau < t[1]; tau += step)
+         AddToPath( tau, ClassicalValue(tau, epsi) + gauss(gen) );
    }
    template<class Generator, class...Args> void SetUserPath
     (double step, Generator& gen, Args...args) {
       if(step <= 0.) Throw("path step must be positive");
-      // boundary conditions are included:
       _Path = _BCs;
       std::vector<double> t = GetKeys(_Path);
-      for(double tau = t[0] + step; tau < t[1]; tau += step)
+      if(PathSize() == 2) for(double tau = t[0] + step; tau < t[1]; tau += step)
          AddToPath(tau, gen(args...));
    }
    template<class Generator, class...Args> void SetUserPath
@@ -115,10 +127,9 @@ template<> class DynamicalSystem<double, double> {
 class EuclidFreeParticle1D : public DynamicalSystem<double, double> {
    public:
    double ClassicalValue
-    (double tau, double epsi = 0., bool checkIfSolvable = true) const override {
-      if(checkIfSolvable and !IsSolvable())
-         Throw("need exactly 2 boundary conditions "
-                "to solve the classical motion");
+    (double tau, double epsi = 0.) const override {
+      if(!IsSolvable()) Throw("need exactly 2 boundary conditions "
+                               "to solve the classical motion");
       std::vector<double> t = GetKeys(_BCs);
       std::vector<double> x = GetValues(_BCs);
       return ( (t[1] - tau)*x[0] + (tau - t[0])*x[1] )/( t[1] - t[0] );
@@ -139,9 +150,6 @@ class EuclidFreeParticle1D : public DynamicalSystem<double, double> {
    }
    bool IsSolvable() const override { return _BCs.size() == 2; }
    double Mass() const { return _mass; }
-   void SetClassicalPath(double step, double epsi = 0.) override {
-      DynamicalSystem::SetClassicalPath(step,epsi);
-   }
    void Throw(const char* why) const override {
       throw DynamicalException(this, why);
    }
@@ -153,10 +161,9 @@ class EuclidFreeParticle1D : public DynamicalSystem<double, double> {
 class EuclidHarmonicOscillator1D : public DynamicalSystem<double, double> {
    public:
    double ClassicalValue
-    (double tau, double epsi = 0., bool checkIfSolvable = true) const override {
-      if(checkIfSolvable and !IsSolvable())
-         Throw("need exactly 2 boundary conditions "
-                "to solve the classical motion");
+    (double tau, double epsi = 0.) const override {
+      if(!IsSolvable()) Throw("need exactly 2 boundary conditions "
+                               "to solve the classical motion");
       std::vector<double> t = GetKeys(_BCs);
       std::vector<double> x = GetValues(_BCs);
       return ( std::sinh( _freq*(t[1] - tau) )*x[0]
@@ -183,9 +190,6 @@ class EuclidHarmonicOscillator1D : public DynamicalSystem<double, double> {
    double Frequency() const { return _freq; }
    bool IsSolvable() const override { return _BCs.size() == 2; }
    double Mass() const { return _mass; }
-   void SetClassicalPath(double step, double epsi = 0.) override {
-      DynamicalSystem::SetClassicalPath(step,epsi);
-   }
    void Throw(const char* why) const override { throw DynamicalException(this, why); }
    private:
    const double _freq;
