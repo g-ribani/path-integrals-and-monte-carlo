@@ -20,6 +20,9 @@ Methods are implemented to set paths in euclidean coordinate space, to fix bound
 
 The project is still at the early stage...
 
+**Requires c++17**
+
+
 
 
 
