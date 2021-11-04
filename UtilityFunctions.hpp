@@ -4,32 +4,36 @@
 #include <map>
 #include <ostream>
 #include <string>
-#include <utility>
+#include <utility>   // std::pair
 #include <vector>
 
-// returns a linearly spaced vector of n doubles from in to fin
-std::vector<double> LinearRange(double in, double fin, std::size_t n) {
+// returns a linearly spaced vector of nPoints doubles from in to fin, included
+std::vector<double> LinearRange(double in, double fin, std::size_t nPoints) {
       std::vector<double> ret;
-      if(n == 1) ret.push_back((in + fin)/2.); // midpoint if n == 1
-      else if(n > 1) {
-         const double step = (fin - in)/(n - 1);
-         for(std::size_t k = 0; k != n; ++k) ret.push_back(in + k*step);
+      if(nPoints == 0); // empty if nPoints == 0
+      else if(nPoints == 1) ret.push_back((in + fin)/2.); // midpoint if nPoints == 1
+      else {
+         const double step = (fin - in)/(nPoints - 1);
+         for(std::size_t k = 0; k != nPoints; ++k, in += step)
+            ret.push_back(in);
       }
-      // empty if n == 0
       return ret;
 }
 
-// returns a vector of doubles from in up to (at most) fin spaced by step
-std::vector<double> StepRange(double in, double fin, double step) {
-   std::vector<double> ret;
-   if(in == fin) ret.push_back(in);
-   else if(fin > in) {
-      if(step > 0.) for(double x = in; x <= fin; x += step) ret.push_back(x);
-   }
-   else if (step < 0.)
-         for (double x = in; x >= fin; x += step) ret.push_back(x);
-   return ret;
-}
+// // returns a vector of doubles from in up to (at most) fin spaced by step
+// std::vector<double> StepRange(double in, double fin, double step) {
+//    std::vector<double> ret;
+//    if(in == fin) ret.push_back(in);
+//    else if(fin > in) {
+//       if(step > 0.) for(double x = in; x < fin; x += step) ret.push_back(x);
+//       ret.push_back(fin);
+//    }
+//    else if (step < 0.) {
+//       for (double x = in; x > fin; x += step) ret.push_back(x);
+//       ret.push_back(fin);
+//    }
+//    return ret;
+// }
 
 // writes an std::array on an std::ostream
 template<class T, std::size_t N> std::ostream& operator <<
