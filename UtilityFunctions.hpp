@@ -8,14 +8,14 @@
 #include <utility>   // std::pair
 #include <vector>
 
-// returns a linearly spaced vector of nPoints doubles from in to fin, included
-std::vector<double> inline LinearRange
- (double in, double fin, std::size_t nPoints) {
-      std::vector<double> ret;
+// returns a linearly spaced vector of nPoints of type Real from in to fin, included
+template<class Real> inline std::vector<Real> LinearRange
+ (Real in, Real fin, std::size_t nPoints) {
+      std::vector<Real> ret;
       if(nPoints == 0); // empty if nPoints == 0
       else if(nPoints == 1) ret.push_back((in + fin)/2.); // midpoint if nPoints == 1
       else {
-         const double step = (fin - in)/(nPoints - 1);
+         const Real step = (fin - in)/(nPoints - 1);
          for(std::size_t k = 0; k != nPoints; ++k, in += step)
             ret.push_back(in);
       }

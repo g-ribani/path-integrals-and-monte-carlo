@@ -9,6 +9,8 @@ Path integrals and elementary lattice QCD using Monte Carlo techniques.
 
 `DynamicalSystem.hpp` contains definitions of types suited to represent (a limited class of) classical dynamical systems.
 
+`MonteCarlo.hpp` contains routines for Monte Carlo integration
+
 For the moment, the following classes are defined:
 - `DynamicalException` (template class)
 - `DynamicalSystem` (template class)
@@ -16,11 +18,11 @@ For the moment, the following classes are defined:
 - `EuclidHarmonicOscillator1D`
 - `EuclidParticle1D`
 
-Methods are implemented to set paths in coordinate space, to fix boundary conditions and to compute the classical motion (for the moment, only for free particle and harmonic oscillator). Support for handling random paths is included. Functions that compute the discretized action will be defined separately. The exact Feynman amplitude is also provided whenever it is known.
+The objective of these classes is to provide a unified and practical interface to set and use paths of dynamical systems in coordinate space. For the moment the simplest 1D case is developed most.
 
 The project is still at the early stage...
 
-**Requires c++17**
+**Requires c++17, boost and gsl**
 
 
 
