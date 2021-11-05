@@ -1,7 +1,6 @@
 #ifndef DYNAMICAL_SYSTEM_HPP
 #define DYNAMICAL_SYSTEM_HPP
 #include <cmath>  // std::sinh, std::tanh, std::acos
-#include <boost/core/demangle.hpp>
 #include <exception>
 #include <iostream>  // std::cout
 #include <map>
@@ -56,7 +55,8 @@ template<class CT, class VT> class DynamicalSystem {
    }
    std::vector<_ValueType> PathValues() const { return GetValues(_Path); }
    void PrintPath(std::ostream& os = std::cout) const { os << _Path << '\n'; }
-   void SetClassicalPath(const std::vector<_CoordType>& coords, double epsi) {
+   void SetClassicalPath
+    (const std::vector<_CoordType>& coords, double epsi) {
       ClearPath();
       for(const auto& t : coords) AddToPath( t, ClassicalValue(t, epsi) );
    }
@@ -101,7 +101,7 @@ template<> class DynamicalSystem<double, double> {
    }
    std::map<double, double> BoundaryConditions() const { return _BCs; }
    virtual double ClassicalValue (double t, double epsi) const {
-      Throw("don't know how to solve this system");
+      Throw("in function ClassicalValue: don't know how to solve this system");
       return 0.;
    }
    void ClearBoundaryConditions() { _BCs.clear(); }
@@ -115,58 +115,23 @@ template<> class DynamicalSystem<double, double> {
    void PrintPath(std::ostream& os = std::cout) const { os << _Path << '\n'; }
    void SetPath(const std::map<double, double>& P) { _Path = P; }
    void SetClassicalPath(std::size_t nPoints, double epsi) {
-      const auto bounds = GetKeys(_BCs);
-      if(bounds.size() != 2) Throw("should have 2 boundary conditions "
-                                    "to set the classical path");
+      if( _BCs.size() != 2 )
+         Throw("in function SetClassicalPath: "
+               "need two boundary conditions");
+      auto bounds = GetKeys(_BCs);
       SetClassicalPath( LinearRange(bounds[0], bounds[1], nPoints), epsi );
    }
-   void SetClassicalPath(const std::vector<double>& coords, double epsi) {
+   void SetClassicalPath
+    (const std::vector<double>& coords, double epsi) {
       ClearPath();
       for(const auto& t : coords) AddToPath(t, ClassicalValue(t, epsi));
    }
-   // template<class Generator> void SetGaussianPath
-   //  (std::size_t nPoints, double epsi, Generator& gen, double sigma) {
-   //    const auto bounds = GetKeys(_BCs);
-   //    if(bounds.size() != 2) Throw("should have 2 boundary conditions to set "
-   //                                  "the gaussian-perturbed classical path");
-   //    auto coords = LinearRange(bounds[0], bounds[1], nPoints);
-   //    coords.erase(coords.begin()),
-   //    coords.erase(coords.end()-1);
-   //    SetGaussianPath(coords, epsi, gen, sigma);
-   //    AddToPath(_BCs);
-   // }
-   // template<class Generator> void SetGaussianPath
-   //  (const std::vector<double>& coords, double epsi,
-   //   Generator& gen, double sigma) {
-   //    ClearPath();
-   //    std::normal_distribution gauss(0., sigma);
-   //    for(const auto& tau : coords)
-   //       AddToPath( tau, ClassicalValue(tau, epsi) + gauss(gen) );
-   // }
-   template<class Generator, class Distribution>
-    void SetQuasiClassicalPath(std::size_t nPoints, double epsi,
-     Distribution& distr, Generator& gen) {
-      const auto bounds = GetKeys(_BCs);
-      if(bounds.size() != 2) Throw("should have 2 boundary conditions "
-                                    "to set the quasiclassical path");
-      auto coords = LinearRange(bounds[0], bounds[1], nPoints);
-      coords.erase(coords.begin()),
-      coords.erase(coords.end()-1);
-      SetQuasiClassicalPath(coords, epsi, distr, gen);
-      AddToPath(_BCs);
-   }
-   template<class Generator, class Distribution>
-    void SetQuasiClassicalPath(const std::vector<double>& coords, double epsi,
-     Distribution& distr, Generator& gen) {
-      ClearPath();
-      for(const auto& t : coords)
-         AddToPath( t, ClassicalValue(t, epsi) + distr(gen) );
-   }
    template<class Distribution, class Generator> void SetRandomPath
     (std::size_t nPoints, Distribution& distr, Generator& gen) {
-      const auto bounds = GetKeys(_BCs);
-      if(bounds.size() != 2) Throw("should have 2 boundary conditions "
-                                    "to set the random path");
+      if( _BCs.size() != 2 )
+         Throw("in function SetRandomPath: "
+               "need two boundary conditions");
+      auto bounds = GetKeys(_BCs);
       auto coords = LinearRange(bounds[0], bounds[1], nPoints);
       coords.erase(coords.begin()),
       coords.erase(coords.end()-1);
@@ -180,9 +145,10 @@ template<> class DynamicalSystem<double, double> {
    }
    template<class Function> void SetUserPath
     (std::size_t nPoints, Function& func) {
-      const auto bounds = GetKeys(_BCs);
-      if(bounds.size() != 2) Throw("should have 2 boundary conditions to set "
-                                    "the user function defined path");
+      if( _BCs.size() != 2 )
+         Throw("in function SetUserPath: "
+               "need two boundary conditions");
+      auto bounds = GetKeys(_BCs);
       auto coords = LinearRange(bounds[0], bounds[1], nPoints);
       coords.erase(coords.begin()),
       coords.erase(coords.end()-1);
@@ -204,21 +170,30 @@ template<> class DynamicalSystem<double, double> {
 // euclidean one-dimensional free particle:
 class EuclidFreeParticle1D : public DynamicalSystem<double, double> {
    public:
+   double ClassicalAction() const {
+      if( _BCs.size() != 2 )
+         Throw("in function ClassicalAction: "
+               "need two boundary conditions");
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
+      return _mass/2.* (x[1] - x[0]) / (t[1] - t[0]);
+   }
    double ClassicalValue
     (double tau, double epsi = 0.) const override {
-      if(!IsSolvable()) Throw("need exactly 2 boundary conditions "
-                               "to solve the classical motion");
+      if(!IsSolvable())
+         Throw("in function ClassicalValue: cannot solve the classical motion");
       auto t = GetKeys(_BCs);
       auto x = GetValues(_BCs);
       return ( (t[1] - tau)*x[0] + (tau - t[0])*x[1] )/( t[1] - t[0] );
    }
    EuclidFreeParticle1D(double mass = 1.) : _mass(mass) {
-      if(mass <= 0.) Throw("must have positive mass");
+      if(mass <= 0.) Throw("in constructor: must have positive mass");
    }
    double ExactAmplitude() const {
       static constexpr double pi = std::acos(-1.);
-      if(!IsSolvable()) Throw("need exactly 2 boundary conditions "
-                                 "to compute the amplitude");
+      if( _BCs.size() != 2 )
+         Throw("in function ExactAmplitude: "
+               "need two boundary conditions");
       auto t = GetKeys(_BCs);
       auto x = GetValues(_BCs);
       double deltaT = t[1] - t[0],
@@ -238,10 +213,21 @@ class EuclidFreeParticle1D : public DynamicalSystem<double, double> {
 // euclidean one-dimensional harmonic oscillator:
 class EuclidHarmonicOscillator1D : public DynamicalSystem<double, double> {
    public:
+   double ClassicalAction() const {
+      if( _BCs.size() != 2 )
+         Throw("in function ClassicalAction: "
+               "need two boundary conditions");
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
+      double deltaT = t[1] - t[0];
+      return _mass*_freq/2.
+                       *( (x[0]*x[0] + x[1]*x[1])/std::tanh(_freq*deltaT)
+                        - 2*x[0]*x[1]/std::sinh(_freq*deltaT) );
+   }
    double ClassicalValue
     (double tau, double epsi = 0.) const override {
-      if(!IsSolvable()) Throw("need exactly 2 boundary conditions "
-                               "to solve the classical motion");
+      if(!IsSolvable())
+         Throw("in function ClassicalValue: cannot solve the classical motion");
       auto t = GetKeys(_BCs);
       auto x = GetValues(_BCs);
       return ( std::sinh( _freq*(t[1] - tau) )*x[0]
@@ -250,13 +236,15 @@ class EuclidHarmonicOscillator1D : public DynamicalSystem<double, double> {
    }
    EuclidHarmonicOscillator1D(double mass = 1., double freq = 1.)
     : _freq(freq), _mass(mass) {
-      if(mass <= 0. or freq <= 0.) Throw("must have positive mass "
-                                          "and positive frequency");
+      if(mass <= 0. or freq <= 0.)
+         Throw("in constructor: must have positive mass "
+               "and positive frequency");
    }
    double ExactAmplitude() const {
       static constexpr double pi = std::acos(-1.);
-      if(!IsSolvable()) Throw("need exactly 2 boundary conditions "
-                                 "to compute the amplitude");
+      if( _BCs.size() != 2 )
+         Throw("in function ExactAmplitude: "
+               "need two boundary conditions");
       auto t = GetKeys(_BCs);
       auto x = GetValues(_BCs);
       double deltaT = t[1] - t[0];
@@ -281,7 +269,7 @@ template<class PotentialFunc> class EuclidParticle1D :
    EuclidParticle1D(double mass = 1.,
     const PotentialFunc& pot = [](double){ return 0.; }) :
      _mass(mass), _potential(pot) {
-            if(mass <= 0.) Throw("must have positive mass");
+            if(mass <= 0.) Throw("in constructor: must have positive mass");
    }
    double Mass() const { return _mass; }
    auto Potential(double x) const { return _potential(x); }
