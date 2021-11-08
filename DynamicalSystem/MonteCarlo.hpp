@@ -10,80 +10,65 @@
 #include <utility>  // std::pair
 #include <vector>
 
-inline double Action(const EuclidFreeParticle1D& part) {
-   const auto pathSize = part.PathSize();
+inline double ElementaryAction
+ (EuclidFreeParticle1D* part, const double& t0, const double& x0,
+  const double& t1, const double& x1) {
+   const double mass = part->Mass(),
+                deltaT = t1 - t0,
+                deltaX = x1 - x0;
+   return mass/2.*deltaX*deltaX/deltaT;
+}
+
+inline double ElementaryAction
+ (EuclidHarmonicOscillator1D* osci, const double& t0, const double& x0,
+  const double& t1, const double& x1) {
+   const double mass = osci->Mass(),
+                freq = osci->Frequency(),
+                deltaT = t1 - t0,
+                deltaX = x1 - x0;
+   return mass/2.*deltaX*deltaX/deltaT
+             + deltaT*mass*freq*freq/4.*( x1*x1 + x0*x0 );
+}
+
+template<class PotentialFunc> inline double ElementaryAction
+ (EuclidParticle1D<PotentialFunc>* part, const double& t0, const double& x0,
+  const double& t1, const double& x1) {
+   const double mass = part->Mass(),
+                deltaT = t1 - t0,
+                deltaX = x1 - x0;
+   PotentialFunc potential = part->Potential();
+   return mass/2.*deltaX*deltaX/deltaT
+             + deltaT/2.*( part.Potential(x1) + part.Potential(x0) );
+}
+
+template<class Obj> inline double Action(Particle1D* part) {
+   const auto pathSize = part->PathSize();
    if(pathSize < 2)
-      part.Throw("in function Action: need at least two points in the path");
-   auto t = part.PathCoords();
-   auto x = part.PathValues();
-   std::vector<double>::size_type const N = pathSize - 1;
-   const double mass = part.Mass();
+      part->Throw("in function Action: need at least two points in the path");
+   auto t = part->PathCoords();
+   auto x = part->PathValues();
    double action = 0.;
-   for(std::vector<double>::size_type k = 1; k != N+1; ++k) {
-      double deltaT = t[k] - t[k-1],
-             deltaX = x[k] - x[k-1];
-      action += mass/2.*deltaX*deltaX/deltaT;
-   }
+   for(std::vector<double>::size_type k = 1; k != pathSize; ++k)
+      action += ElementaryAction(dynamic_cast<Obj*>(part),
+                                 t[k-1],x[k-1],t[k],x[k]);
    return action;
 }
 
-inline double Action(const EuclidHarmonicOscillator1D& osci) {
-   const auto pathSize = osci.PathSize();
+template<class Obj> inline double PathIntegrand(Particle1D* part) {
+   const auto pathSize = part->PathSize();
    if(pathSize < 2)
-      osci.Throw("in function Action: need at least two points in the path");
-   auto t = osci.PathCoords();
-   auto x = osci.PathValues();
-   std::vector<double>::size_type const N = pathSize - 1;
-   const double mass = osci.Mass(),
-                freq = osci.Frequency();
-   double action = 0.;
-   for(std::vector<double>::size_type k = 1; k != N+1; ++k) {
-      double deltaT = t[k] - t[k-1],
-             deltaX = x[k] - x[k-1];
-      action += mass/2.*deltaX*deltaX/deltaT
-                + deltaT*mass*freq*freq/4.*( x[k]*x[k] + x[k-1]*x[k-1] );
-   }
-   return action;
-}
-
-template<class PotentialFunc> inline double Action
- (const EuclidParticle1D<PotentialFunc>& part) {
-   const auto pathSize = part.PathSize();
-   if(pathSize < 2)
-      part.Throw("in function Action: need at least two points in the path");
-   auto t = part.PathCoords();
-   auto x = part.PathValues();
-   std::vector<double>::size_type const N = pathSize - 1;
-   const double mass = part.Mass();
-   double action = 0.;
-   for(std::vector<double>::size_type k = 1; k != N+1; ++k) {
-      double deltaT = t[k] - t[k-1],
-             deltaX = x[k] - x[k-1];
-      action += mass/2.*deltaX*deltaX/deltaT
-                + deltaT/2.*( part.Potential(x[k]) + part.Potential(x[k-1]) );
-   }
-   return action;
-}
-
-inline double PathIntegrand(const EuclidHarmonicOscillator1D& osci) {
-   const auto pathSize = osci.PathSize();
-   if(pathSize < 2)
-      osci.Throw("in function PathIntegrand: "
+      part->Throw("in function PathIntegrand: "
                   "need at least two points in the path");
-   auto t = osci.PathCoords();
-   auto x = osci.PathValues();
+   auto t = part->PathCoords();
+   auto x = part->PathValues();
    std::vector<double>::size_type const N = pathSize - 1;
-   const double mass = osci.Mass(),
-                freq = osci.Frequency();
-   double integrand = 1.; // exp(-S)*{normalization}
-   for(std::vector<double>::size_type k = 1; k != N+1; ++k) {
-      double deltaT = t[k] - t[k-1],
-             deltaX = x[k] - x[k-1],
-             deltaS = mass/2.*deltaX*deltaX/deltaT
-                      + deltaT*mass*freq*freq/4.*( x[k]*x[k] + x[k-1]*x[k-1] );
-      integrand *= std::sqrt(mass/(2.*M_PI*deltaT)) * std::exp(-deltaS);
-   }
-   return integrand;
+   const double mass = part->Mass();
+   double integrand = 1.;
+   for(std::vector<double>::size_type k = 1; k != N+1; ++k)
+      integrand *= std::sqrt(mass/(2.*M_PI*(t[k] - t[k-1])))
+                   *std::exp( -ElementaryAction(dynamic_cast<Obj*>(part),
+                              t[k-1],x[k-1],t[k],x[k]) );
+   return integrand; // exp(-S)*{normalization}
 }
 
 inline double PathIntegrand(double* x, std::size_t dim, void* params) { // to be used with gsl VEGAS routine
@@ -100,16 +85,19 @@ inline double PathIntegrand(double* x, std::size_t dim, void* params) { // to be
    return ret;
 }
 
-template<class Generator> inline std::pair<double, double> CrudeMCAmplitude
- (EuclidHarmonicOscillator1D& osci, std::size_t nSteps,
+template<class Obj, class Generator> inline std::pair<double, double>
+ CrudeMCAmplitude (Particle1D* part, std::size_t nSteps,
   double xmin, double xmax, Generator& gen, std::size_t nEvals) {
    std::uniform_real_distribution<double> distr(xmin, xmax);
    std::vector<double> evals;
    gen.seed( std::chrono::high_resolution_clock::
                now().time_since_epoch().count() );
    for(size_t k = 0; k != nEvals; ++k) {
-      osci.SetRandomPath(nSteps+1, distr, gen);
-      evals.push_back( PathIntegrand(osci) * std::pow(xmax - xmin, nSteps-1) );
+      if( !(k % 10'000) )
+         std::cout << (float)k << '\r' << std::flush;
+      part->SetRandomPath(nSteps+1, distr, gen);
+      evals.push_back( PathIntegrand<Obj>(part)
+                        *std::pow(xmax - xmin, nSteps-1) );
    }
    double mean = std::accumulate(evals.begin(), evals.end(), 0.) / nEvals;
    double error = 0.;
@@ -117,6 +105,13 @@ template<class Generator> inline std::pair<double, double> CrudeMCAmplitude
       error += std::pow(evals[k] - mean, 2.);
    error = std::sqrt( error/(nEvals*(nEvals-1)) );   // standard deviation of the mean
    return std::make_pair(mean,error);
+}
+
+// wrapper to simplify the call to CrudeMCAmplitude:
+template<class Obj, class Generator> inline std::pair<double, double>
+ CrudeMCAmplitude (Obj* part, std::size_t nSteps,
+  double xmin, double xmax, Generator& gen, std::size_t nEvals) {
+   return CrudeMCAmplitude<Obj>((Particle1D*)part, nSteps, xmin, xmax, gen, nEvals);
 }
 
 inline std::pair<double, double> VegasMCAmplitude

@@ -50,10 +50,20 @@ template<class CT, class VT> class DynamicalSystem {
    }
    void ClearBoundaryConditions() { _BCs.clear(); }
    void ClearPath() { _Path.clear(); }
+   CoordType& Coord
+    (typename std::map<CoordType, ValueType>::iterator it) const {
+      return std::get<0>(*it);
+   }
    virtual ~DynamicalSystem() {}
    virtual bool IsSolvable() const { return false; }
    std::map<CoordType, ValueType> Path() const { return _Path; }
+   // typename std::map<CoordType, ValueType>::iterator PathBegin() {
+   //    return _Path.begin();
+   // }
    std::vector<CoordType> PathCoords() const { return GetKeys(_Path); }
+   // typename std::map<CoordType, ValueType>::iterator PathEnd() {
+   //    return _Path.end();
+   // }
    typename std::map<CoordType, ValueType>::size_type PathSize() const {
       return _Path.size();
    }
@@ -79,6 +89,10 @@ template<class CT, class VT> class DynamicalSystem {
    virtual void Throw(const char* why) const {
       throw DynamicalException(this, why);
    }
+   // ValueType& Value
+   //  (typename std::map<CoordType, ValueType>::iterator it) const {
+   //    return std::get<1>(*it);
+   // }
    protected:
    std::map<CoordType, ValueType> _BCs, _Path;
 };
@@ -109,10 +123,19 @@ template<> class DynamicalSystem<double, double> {
    }
    void ClearBoundaryConditions() { _BCs.clear(); }
    void ClearPath() { _Path.clear(); }
+   // double& Coord (typename std::map<double, double>::iterator it) const {
+   //    return std::get<0>(*it);
+   // }
    virtual ~DynamicalSystem() {}
    virtual bool IsSolvable() const { return false; }
    std::map<double, double> Path() const { return _Path; }
+   // typename std::map<double, double>::iterator PathBegin() {
+   //    return _Path.begin();
+   // }
    std::vector<double> PathCoords() const { return GetKeys(_Path); }
+   // typename std::map<double, double>::iterator PathEnd() {
+   //    return _Path.end();
+   // }
    typename std::map<double, double>::size_type PathSize() const {
       return _Path.size();
    }
@@ -168,61 +191,72 @@ template<> class DynamicalSystem<double, double> {
    virtual void Throw(const char* why) const {
       throw DynamicalException(this, why);
    }
+   // double& Value (typename std::map<double, double>::iterator it) const {
+   //    return std::get<1>(*it);
+   // }
    protected:
    std::map<double, double> _BCs, _Path;
 };
 
+class Particle1D : public DynamicalSystem<double, double> {
+   public:
+   double Mass() const { return _mass; }
+   Particle1D(double mass) : _mass(mass) {
+      if(mass <= 0.) Throw("in constructor: must have positive mass");
+   }
+   void Throw(const char* why) const override {
+      throw DynamicalException(this, why);
+   }
+   protected:
+   const double _mass;
+};
+
 // euclidean one-dimensional free particle:
-class EuclidFreeParticle1D : public DynamicalSystem<double, double> {
+class EuclidFreeParticle1D : public Particle1D {
    public:
    double ClassicalAction() const {
-      if( this->_BCs.size() != 2 )
+      if( _BCs.size() != 2 )
          Throw("in method ClassicalAction: "
                "need two boundary conditions");
-      auto t = GetKeys(this->_BCs);
-      auto x = GetValues(this->_BCs);
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
       return _mass/2.* (x[1] - x[0]) / (t[1] - t[0]);
    }
    double ClassicalValue
     (double tau, double epsi = 0.) const override {
       if(!IsSolvable())
          Throw("in method ClassicalValue: cannot solve the classical motion");
-      auto t = GetKeys(this->_BCs);
-      auto x = GetValues(this->_BCs);
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
       return ( (t[1] - tau)*x[0] + (tau - t[0])*x[1] )/( t[1] - t[0] );
    }
-   EuclidFreeParticle1D(double mass) : _mass(mass) {
-      if(mass <= 0.) Throw("in constructor: must have positive mass");
-   }
+   using Particle1D::Particle1D;
    double ExactAmplitude() const {
-      if( this->_BCs.size() != 2 )
+      if( _BCs.size() != 2 )
          Throw("in method ExactAmplitude: "
                "need two boundary conditions");
-      auto t = GetKeys(this->_BCs);
-      auto x = GetValues(this->_BCs);
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
       double deltaT = t[1] - t[0],
-           deltaX = x[1] - x[0];
+             deltaX = x[1] - x[0];
       return std::sqrt( _mass/(2.*M_PI*deltaT) )
          *std::exp( -_mass*deltaX*deltaX/(2.*deltaT) );
    }
-   bool IsSolvable() const override { return this->_BCs.size() == 2; }
-   double Mass() const { return _mass; }
+   bool IsSolvable() const override { return _BCs.size() == 2; }
    void Throw(const char* why) const override {
       throw DynamicalException(this, why);
    }
-   private:
-   const double _mass;
 };
 
 // euclidean one-dimensional harmonic oscillator:
-class EuclidHarmonicOscillator1D : public DynamicalSystem<double, double> {
+class EuclidHarmonicOscillator1D : public Particle1D {
    public:
    double ClassicalAction() const {
-      if( this->_BCs.size() != 2 )
+      if( _BCs.size() != 2 )
          Throw("in method ClassicalAction: "
                "need two boundary conditions");
-      auto t = GetKeys(this->_BCs);
-      auto x = GetValues(this->_BCs);
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
       double deltaT = t[1] - t[0];
       return _mass*_freq/2.
                        *( (x[0]*x[0] + x[1]*x[1])/std::tanh(_freq*deltaT)
@@ -232,24 +266,24 @@ class EuclidHarmonicOscillator1D : public DynamicalSystem<double, double> {
     (double tau, double epsi = 0.) const override {
       if(!IsSolvable())
          Throw("in method ClassicalValue: cannot solve the classical motion");
-      auto t = GetKeys(this->_BCs);
-      auto x = GetValues(this->_BCs);
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
       return ( std::sinh( _freq*(t[1] - tau) )*x[0]
                            + std::sinh( _freq*(tau - t[0]) )*x[1] )
                            / std::sinh( _freq*(t[1] - t[0]) );
    }
    EuclidHarmonicOscillator1D(double mass, double freq)
-    : _freq(freq), _mass(mass) {
+    :  Particle1D(mass), _freq(freq) {
       if(mass <= 0. or freq <= 0.)
          Throw("in constructor: must have positive mass "
                "and positive frequency");
    }
    double ExactAmplitude() const {
-      if( this->_BCs.size() != 2 )
+      if( _BCs.size() != 2 )
          Throw("in method ExactAmplitude: "
                "need two boundary conditions");
-      auto t = GetKeys(this->_BCs);
-      auto x = GetValues(this->_BCs);
+      auto t = GetKeys(_BCs);
+      auto x = GetValues(_BCs);
       double deltaT = t[1] - t[0];
       return std::sqrt( _mass/(2.*M_PI*deltaT) )
          *std::exp( -_mass*_freq/2.
@@ -257,32 +291,27 @@ class EuclidHarmonicOscillator1D : public DynamicalSystem<double, double> {
                         - 2.*x[0]*x[1]/std::sinh(_freq*deltaT) ) );
    }
    double Frequency() const { return _freq; }
-   bool IsSolvable() const override { return this->_BCs.size() == 2; }
-   double Mass() const { return _mass; }
+   bool IsSolvable() const override { return _BCs.size() == 2; }
    void Throw(const char* why) const override {
       throw DynamicalException(this, why);
    }
    private:
    const double _freq;
-   const double _mass;
 };
 
 // euclidean one-dimensional particle in a potential
 template<class PotentialFunc> class EuclidParticle1D :
- public DynamicalSystem<double, double> {
+ public Particle1D {
    public:
-   EuclidParticle1D(double mass,
-    const PotentialFunc& pot = [](double){ return 0.; }) :
-     _mass(mass), _potential(pot) {
+   EuclidParticle1D(double mass, const PotentialFunc& pot) :
+     Particle1D(mass), _potential(pot) {
             if(mass <= 0.) Throw("in constructor: must have positive mass");
    }
-   double Mass() const { return _mass; }
    auto Potential(double x) const { return _potential(x); }
    void Throw(const char* why) const override {
       throw DynamicalException(this, why);
    }
    private:
-   const double _mass;
    const PotentialFunc _potential;
 };
 
