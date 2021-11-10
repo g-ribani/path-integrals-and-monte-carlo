@@ -71,7 +71,8 @@ template<class Obj> inline double PathIntegrand(Particle1D* part) {
    return integrand; // exp(-S)*{normalization}
 }
 
-inline double PathIntegrand(double* x, std::size_t dim, void* params) { // to be used with gsl VEGAS routine
+// to be used with gsl VEGAS routine:
+inline double PathIntegrand(double* x, std::size_t dim, void* params) {
    const double mass = ((double*)params)[0],
                 freq = ((double*)params)[1],
                 step = ((double*)params)[2];
@@ -85,7 +86,12 @@ inline double PathIntegrand(double* x, std::size_t dim, void* params) { // to be
    return ret;
 }
 
-template<class Obj, class Generator> inline std::pair<double, double>
+struct MCResult {
+   double res;
+   double err;
+};
+
+template<class Obj, class Generator> inline MCResult
  CrudeMCAmplitude (Particle1D* part, std::size_t nSteps,
   double xmin, double xmax, Generator& gen, std::size_t nEvals) {
    std::uniform_real_distribution<double> distr(xmin, xmax);
@@ -93,8 +99,8 @@ template<class Obj, class Generator> inline std::pair<double, double>
    gen.seed( std::chrono::high_resolution_clock::
                now().time_since_epoch().count() );
    for(size_t k = 0; k != nEvals; ++k) {
-      if( !(k % 10'000) )
-         std::cout << (float)k << '\r' << std::flush;
+      // if( !(k % 10'000) )
+      //    std::cout << (float)k << '\r' << std::flush;
       part->SetRandomPath(nSteps+1, distr, gen);
       evals.push_back( PathIntegrand<Obj>(part)
                         *std::pow(xmax - xmin, nSteps-1) );
@@ -104,17 +110,18 @@ template<class Obj, class Generator> inline std::pair<double, double>
    for(std::size_t k = 0; k != nEvals; ++k)
       error += std::pow(evals[k] - mean, 2.);
    error = std::sqrt( error/(nEvals*(nEvals-1)) );   // standard deviation of the mean
-   return std::make_pair(mean,error);
+   return {mean,error};
 }
 
 // wrapper to simplify the call to CrudeMCAmplitude:
-template<class Obj, class Generator> inline std::pair<double, double>
+template<class Obj, class Generator> inline MCResult
  CrudeMCAmplitude (Obj* part, std::size_t nSteps,
   double xmin, double xmax, Generator& gen, std::size_t nEvals) {
-   return CrudeMCAmplitude<Obj>((Particle1D*)part, nSteps, xmin, xmax, gen, nEvals);
+   return CrudeMCAmplitude<Obj>
+            ((Particle1D*)part, nSteps, xmin, xmax, gen, nEvals);
 }
 
-inline std::pair<double, double> VegasMCAmplitude
+inline MCResult VegasMCAmplitude
  (EuclidHarmonicOscillator1D& osci, std::size_t nSteps,
   double xmin, double xmax, std::size_t nEvals) {
    auto bounds = GetKeys( osci.BoundaryConditions() );
@@ -144,7 +151,31 @@ inline std::pair<double, double> VegasMCAmplitude
    delete[] xl,
    delete[] xu;
    if( err != 0 ) throw err;
-   return std::make_pair(result, stddev);
+   return {result, stddev};
+}
+
+// this template integrates a generic function accepting a double* as an argument
+template<class Function> inline MCResult VEGASIntegrate
+ (Function& funza, std::size_t dim, void *params, double xmin,
+  double xmax, std::size_t nEvals) {
+   gsl_monte_function func {funza, dim, params};
+   double *xl = new double[dim],
+          *xu = new double[dim];
+   for(std::size_t k = 0; k != dim; ++k) xl[k] = xmin,
+                                         xu[k] = xmax;
+   gsl_rng *gen = gsl_rng_alloc(gsl_rng_mt19937_1999);
+   gsl_rng_set(gen, std::chrono::high_resolution_clock::
+                        now().time_since_epoch().count() );
+   gsl_monte_vegas_state *s = gsl_monte_vegas_alloc(dim);
+   double result, stddev;
+   int err = gsl_monte_vegas_integrate(&func, xl, xu, dim, nEvals,
+                                       gen, s, &result, &stddev);
+   gsl_monte_vegas_free(s);
+   gsl_rng_free(gen);
+   delete[] xl,
+   delete[] xu;
+   if( err != 0 ) throw err;
+   return {result, stddev};
 }
 
 
