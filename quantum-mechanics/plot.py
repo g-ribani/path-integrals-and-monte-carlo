@@ -1,5 +1,6 @@
 from matplotlib import pyplot as plt
 import linecache as lnch
+import numpy as np
 
 file_name = 'naive-bis.out'
 
@@ -24,6 +25,8 @@ plt.errorbar(times, results, yerr = errors, ecolor = 'lightblue', color='blue',
 plt.xlabel("1 unit = 1 sec of computation (arbitrary offset)")
 plt.hlines(y = exact_amp, xmin = first_line, xmax = last_line, color = 'red',
             label = "exact result")
+plt.hlines(y = np.mean(results), xmin = first_line, xmax = last_line,
+            color = 'green', label = "average result")
 plt.ylabel("amplitude (hbar = 1)")
 plt.legend(loc = "upper left")
 plt.show()
