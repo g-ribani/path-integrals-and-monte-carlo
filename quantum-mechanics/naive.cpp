@@ -1,5 +1,4 @@
 #include <boost/math/quadrature/naive_monte_carlo.hpp>
-#include <cmath>
 #include <iostream>
 #include <fstream>
 #include "QMPathIntegrals.cpp"
@@ -11,6 +10,7 @@
    #define N_THREADS 1
 #endif
 
+// PrintProgress function taken from a Boost example
 void PrintProgress (const double &progress,
                     const double &error_estimate,
                     const double &current_estimate,
@@ -46,7 +46,7 @@ double NaiveMCAmplitude (EuclidHarmonicOscillator1D& osci,
    boost::math::quadrature::naive_monte_carlo<double, decltype(F)>
     mc(F, bounds, error_goal, /*singular = */ false, N_THREADS);
    std::future<double> task = mc.integrate();
-   while
+   while    // wait and print cycle taken from a Boost example
     (task.wait_for(std::chrono::seconds(1)) != std::future_status::ready)
       PrintProgress(mc.progress(),
                     mc.current_error_estimate(),
