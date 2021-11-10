@@ -15,12 +15,12 @@ int main() {
              << "Exact amplitude = " << osci.ExactAmplitude()
              << "\n\n" << std::flush;
 
-   double xmin = -2.,
-          xmax = 2.;
+   double xmin = -5.,
+          xmax = 5.;
    MCResult amp;
 
    std::size_t nEvals = 10'000'000,
-                nSteps = 12;
+                nSteps = 10;
 
    std::clog << "nEvals = " << (float)nEvals << '\n'
                << "xmin xmax = " << xmin << ' ' << xmax << "\n\n";
@@ -29,6 +29,7 @@ int main() {
       std::cout << "\nrepeat = " << repeat << '\n' << std::flush;
 
    #ifdef BE_CRUDE
+      #pragma omp parallel
       amp = CrudeMCAmplitude(&osci, nSteps, xmin, xmax, gen, nEvals);
       std::clog << "Crude MonteCarlo amplitude = "
                << amp.res << " +/- " << amp.err << " // " << nSteps << " steps"
@@ -37,7 +38,10 @@ int main() {
    #endif
 
    #ifdef BE_VEGAS
-      try{ amp = VegasMCAmplitude(osci, nSteps, xmin, xmax, nEvals); }
+      try{
+         #pragma omp parallel
+         amp = VegasMCAmplitude(osci, nSteps, xmin, xmax, nEvals);
+      }
       catch(int errcode) {
          std::cout << "Vegas error code " << errcode << '\n' << std::flush;
          continue;

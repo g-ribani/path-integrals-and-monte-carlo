@@ -198,10 +198,10 @@ template<> class DynamicalSystem<double, double> {
    std::map<double, double> _BCs, _Path;
 };
 
-class Particle1D : public DynamicalSystem<double, double> {
+class Basic_Particle1D : public DynamicalSystem<double, double> {
    public:
    double Mass() const { return _mass; }
-   Particle1D(double mass) : _mass(mass) {
+   Basic_Particle1D(double mass) : _mass(mass) {
       if(mass <= 0.) Throw("in constructor: must have positive mass");
    }
    void Throw(const char* why) const override {
@@ -212,7 +212,7 @@ class Particle1D : public DynamicalSystem<double, double> {
 };
 
 // euclidean one-dimensional free particle:
-class EuclidFreeParticle1D : public Particle1D {
+class EuclidFreeParticle1D : public Basic_Particle1D {
    public:
    double ClassicalAction() const {
       if( _BCs.size() != 2 )
@@ -230,7 +230,7 @@ class EuclidFreeParticle1D : public Particle1D {
       auto x = GetValues(_BCs);
       return ( (t[1] - tau)*x[0] + (tau - t[0])*x[1] )/( t[1] - t[0] );
    }
-   using Particle1D::Particle1D;
+   using Basic_Particle1D::Basic_Particle1D;
    double ExactAmplitude() const {
       if( _BCs.size() != 2 )
          Throw("in method ExactAmplitude: "
@@ -249,7 +249,7 @@ class EuclidFreeParticle1D : public Particle1D {
 };
 
 // euclidean one-dimensional harmonic oscillator:
-class EuclidHarmonicOscillator1D : public Particle1D {
+class EuclidHarmonicOscillator1D : public Basic_Particle1D {
    public:
    double ClassicalAction() const {
       if( _BCs.size() != 2 )
@@ -273,7 +273,7 @@ class EuclidHarmonicOscillator1D : public Particle1D {
                            / std::sinh( _freq*(t[1] - t[0]) );
    }
    EuclidHarmonicOscillator1D(double mass, double freq)
-    :  Particle1D(mass), _freq(freq) {
+    :  Basic_Particle1D(mass), _freq(freq) {
       if(mass <= 0. or freq <= 0.)
          Throw("in constructor: must have positive mass "
                "and positive frequency");
@@ -301,10 +301,10 @@ class EuclidHarmonicOscillator1D : public Particle1D {
 
 // euclidean one-dimensional particle in a potential
 template<class PotentialFunc> class EuclidParticle1D :
- public Particle1D {
+ public Basic_Particle1D {
    public:
    EuclidParticle1D(double mass, const PotentialFunc& pot) :
-     Particle1D(mass), _potential(pot) {
+     Basic_Particle1D(mass), _potential(pot) {
             if(mass <= 0.) Throw("in constructor: must have positive mass");
    }
    auto Potential(double x) const { return _potential(x); }

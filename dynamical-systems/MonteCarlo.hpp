@@ -36,12 +36,11 @@ template<class PotentialFunc> inline double ElementaryAction
    const double mass = part->Mass(),
                 deltaT = t1 - t0,
                 deltaX = x1 - x0;
-   PotentialFunc potential = part->Potential();
    return mass/2.*deltaX*deltaX/deltaT
-             + deltaT/2.*( part.Potential(x1) + part.Potential(x0) );
+             + deltaT/2.*( part->Potential(x1) + part->Potential(x0) );
 }
 
-template<class Obj> inline double Action(Particle1D* part) {
+template<class Obj> inline double Action(Basic_Particle1D* part) {
    const auto pathSize = part->PathSize();
    if(pathSize < 2)
       part->Throw("in function Action: need at least two points in the path");
@@ -54,7 +53,7 @@ template<class Obj> inline double Action(Particle1D* part) {
    return action;
 }
 
-template<class Obj> inline double PathIntegrand(Particle1D* part) {
+template<class Obj> inline double PathIntegrand(Basic_Particle1D* part) {
    const auto pathSize = part->PathSize();
    if(pathSize < 2)
       part->Throw("in function PathIntegrand: "
@@ -75,14 +74,24 @@ template<class Obj> inline double PathIntegrand(Particle1D* part) {
 inline double PathIntegrand(double* x, std::size_t dim, void* params) {
    const double mass = ((double*)params)[0],
                 freq = ((double*)params)[1],
-                step = ((double*)params)[2];
-   double ret = 1.;
-   for(std::size_t k = 1; k != dim + 2; ++k) {
-      double deltaX = x[k] - x[k-1],
-             deltaS = mass/2.*deltaX*deltaX/step
+                step = ((double*)params)[2],
+                xin = ((double*)params)[3],
+                xfin = ((double*)params)[4];
+   double ret = 1., deltaX, deltaS;
+   deltaX = x[0] - xin,
+   deltaS = mass/2.*deltaX*deltaX/step
+                   + step*mass*freq*freq/4.*( x[0]*x[0] + xin*xin );
+   ret *= std::sqrt(mass/(2.*M_PI*step)) * std::exp(-deltaS);
+   for(std::size_t k = 1; k != dim; ++k) {
+      deltaX = x[k] - x[k-1],
+      deltaS = mass/2.*deltaX*deltaX/step
                       + step*mass*freq*freq/4.*( x[k]*x[k] + x[k-1]*x[k-1] );
       ret *= std::sqrt(mass/(2.*M_PI*step)) * std::exp(-deltaS);
    }
+   deltaX = xfin - x[dim-1],
+   deltaS = mass/2.*deltaX*deltaX/step
+                   + step*mass*freq*freq/4.*( xfin*xfin + x[dim-1]*x[dim-1] );
+   ret *= std::sqrt(mass/(2.*M_PI*step)) * std::exp(-deltaS);
    return ret;
 }
 
@@ -92,7 +101,7 @@ struct MCResult {
 };
 
 template<class Obj, class Generator> inline MCResult
- CrudeMCAmplitude (Particle1D* part, std::size_t nSteps,
+ CrudeMCAmplitude (Basic_Particle1D* part, std::size_t nSteps,
   double xmin, double xmax, Generator& gen, std::size_t nEvals) {
    std::uniform_real_distribution<double> distr(xmin, xmax);
    std::vector<double> evals;
@@ -118,21 +127,25 @@ template<class Obj, class Generator> inline MCResult
  CrudeMCAmplitude (Obj* part, std::size_t nSteps,
   double xmin, double xmax, Generator& gen, std::size_t nEvals) {
    return CrudeMCAmplitude<Obj>
-            ((Particle1D*)part, nSteps, xmin, xmax, gen, nEvals);
+            ((Basic_Particle1D*)part, nSteps, xmin, xmax, gen, nEvals);
 }
 
 inline MCResult VegasMCAmplitude
  (EuclidHarmonicOscillator1D& osci, std::size_t nSteps,
   double xmin, double xmax, std::size_t nEvals) {
-   auto bounds = GetKeys( osci.BoundaryConditions() );
-   if( bounds.size() != 2)
+   auto BCs = osci.BoundaryConditions();
+   auto t_bounds = GetKeys(BCs);
+   if( t_bounds.size() != 2)
       osci.Throw("in function VEGASMCAmplitude: need two boundary conditions");
-   const double step = (bounds[1] - bounds[0])/nSteps;
+   const double step = (t_bounds[1] - t_bounds[0])/nSteps;
    const std::size_t dim = nSteps - 1;
-   double* params = new double[3];
+   double* params = new double[5];
+   auto x_bounds = GetValues(BCs);
    params[0] = osci.Mass(),
    params[1] = osci.Frequency(),
-   params[2] = step;
+   params[2] = step,
+   params[3] = x_bounds[0],
+   params[4] = x_bounds[1];
    gsl_monte_function func {PathIntegrand, dim, params};
    double *xl = new double[dim],
           *xu = new double[dim];
@@ -156,9 +169,9 @@ inline MCResult VegasMCAmplitude
 
 // this template integrates a generic function accepting a double* as an argument
 template<class Function> inline MCResult VEGASIntegrate
- (Function& funza, std::size_t dim, void *params, double xmin,
+ (Function& func, std::size_t dim, void *params, double xmin,
   double xmax, std::size_t nEvals) {
-   gsl_monte_function func {funza, dim, params};
+   gsl_monte_function integrand {func, dim, params};
    double *xl = new double[dim],
           *xu = new double[dim];
    for(std::size_t k = 0; k != dim; ++k) xl[k] = xmin,
@@ -168,7 +181,7 @@ template<class Function> inline MCResult VEGASIntegrate
                         now().time_since_epoch().count() );
    gsl_monte_vegas_state *s = gsl_monte_vegas_alloc(dim);
    double result, stddev;
-   int err = gsl_monte_vegas_integrate(&func, xl, xu, dim, nEvals,
+   int err = gsl_monte_vegas_integrate(&integrand, xl, xu, dim, nEvals,
                                        gen, s, &result, &stddev);
    gsl_monte_vegas_free(s);
    gsl_rng_free(gen);
