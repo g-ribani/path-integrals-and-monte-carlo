@@ -1,7 +1,7 @@
 #include <boost/math/quadrature/naive_monte_carlo.hpp>
 #include <iostream>
 #include <fstream>
-#include "QMPathIntegrals.cpp"
+#include "QMPathIntegrals.hpp"
 #include <UtilityFunctions.hpp>
 #ifndef N_THREADS
    #define N_THREADS 1
