@@ -1,6 +1,6 @@
 #include <boost/math/quadrature/naive_monte_carlo.hpp>
 #include <iostream>
-#include <fstream>
+// #include <fstream>
 #include "QMPathIntegrals.hpp"
 #include <UtilityFunctions.hpp>
 #ifndef N_THREADS
@@ -57,38 +57,37 @@ double NaiveMCAmplitude (EuclidHarmonicOscillator1D& osci,
 int main() {
    std::cout << std::scientific;
 
-   EuclidHarmonicOscillator1D osci(1., 1.);
-   osci.initial_pos = {0., 0.};
-   osci.final_pos = {1., 1.};
+   EuclidHarmonicOscillator1D osci(0.76, 0.87);
+   osci.initial = {0, -1.5};
+   osci.final = {1., 2.};
    double exact_amp = osci.ExactAmplitude();
+   std::cout << "exact amplitude = " << exact_amp << "\n\n" << std::flush;
 
-   std::ifstream input("naive.in");
    double xmin, xmax, error_goal;
    size_t n_steps;
-   input >> n_steps >> xmin >> xmax >> error_goal;
+   std::cin >> n_steps >> xmin >> xmax >> error_goal;
    auto min_max = std::make_pair(xmin, xmax);
-   input.clear(), input.close();
+   std::cout << '\n';
 
    // // print to file
    // std::ofstream output("naive.log", std::ios::app);
    #ifdef PRINT_LOG
       std::clog << "\n\n\t************\t\n\n"
             << "(xmin, xmax) = " << min_max << '\n'
-            << "nsteps = " << n_steps << '\n'
+            << "n_steps = " << n_steps << '\n'
             << "exact amplitude = " << exact_amp << "\n\n"
             << "estimate\t\terror estimate\n";
    #endif
    double mc_amp =
    // substitute std::clog with output to print to file
       NaiveMCAmplitude(osci, n_steps, min_max, error_goal, std::clog);
-   std::cout << "(xmin, xmax) = " << min_max << '\n'
-             << "nsteps = " << n_steps << '\n'
-             << "exact amplitude = " << exact_amp << std::endl
-             << "Naive MC Amplitude: " << mc_amp
+   std::cout << "\n\n(xmin, xmax) = " << min_max << '\n'
+             << "n_steps = " << n_steps << '\n'
+             << "naive MC Amplitude: " << mc_amp
              << " +/- " << mc_amp*error_goal
              << std::endl;
    #ifdef PRINT_LOG
-      std::clog << "Naive MC Amplitude: " << mc_amp
+      std::clog << "\nnaive MC Amplitude: " << mc_amp
                 << " +/- " << mc_amp*error_goal
                 << std::endl;
    #endif
