@@ -133,7 +133,7 @@ struct EuclidHarmonicOscillator1D {
       double const deltaT = final.t - initial.t,
                    x0 = initial.x,
                    x1 = final.x;
-      return std::sqrt( mass/(2.*M_PI*deltaT) )
+      return std::sqrt( mass*frequency/(2.*M_PI*std::sinh(frequency*deltaT)) )   // !!!
          *std::exp( -mass*frequency/2.
                      *( (x0*x0 + x1*x1)/std::tanh(frequency*deltaT)
                         - 2.*x0*x1/std::sinh(frequency*deltaT) ) );
