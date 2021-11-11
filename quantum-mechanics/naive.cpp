@@ -57,11 +57,11 @@ double NaiveMCAmplitude (EuclidHarmonicOscillator1D& osci,
 int main() {
    std::cout << std::scientific;
 
-   EuclidHarmonicOscillator1D osci(0.76, 0.87);
-   osci.initial = {0, -1.5};
-   osci.final = {1., 2.};
+   EuclidHarmonicOscillator1D osci(1., 1.);
+   osci.initial = {0, 0.};
+   osci.final = {1., 1.};
    double exact_amp = osci.ExactAmplitude();
-   std::cout << "exact amplitude = " << exact_amp << "\n\n" << std::flush;
+   std::cout << "exact amplitude = " << exact_amp << std::endl;
 
    double xmin, xmax, error_goal;
    size_t n_steps;
