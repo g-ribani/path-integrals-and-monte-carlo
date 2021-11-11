@@ -285,7 +285,7 @@ class EuclidHarmonicOscillator1D : public Basic_Particle1D {
       auto t = GetKeys(_BCs);
       auto x = GetValues(_BCs);
       double deltaT = t[1] - t[0];
-      return std::sqrt( _mass/(2.*M_PI*deltaT) )
+      return std::sqrt( _mass*_freq/(2.*M_PI*std::sinh(_freq*deltaT)) )
          *std::exp( -_mass*_freq/2.
                      *( (x[0]*x[0] + x[1]*x[1])/std::tanh(_freq*deltaT)
                         - 2.*x[0]*x[1]/std::sinh(_freq*deltaT) ) );

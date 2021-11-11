@@ -14,7 +14,7 @@ vegas_file_name = 'vegas.log'
 vegas_first_line = 37        #
 vegas_last_line = 157        #
 
-exact_amp = 2.069131e-01    # todo: automize these the following read ops
+exact_amp = 0.1908675    # todo: automize these the following read ops
 n_evals = 1e7               #
 
 max_n = max(crude_last_line - crude_first_line,
