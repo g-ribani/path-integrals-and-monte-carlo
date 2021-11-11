@@ -70,7 +70,7 @@ template<class Obj> inline double PathIntegrand(Basic_Particle1D* part) {
    return integrand; // exp(-S)*{normalization}
 }
 
-// to be used with gsl VEGAS routine:
+// to be used with gsl Vegas routine:
 inline double PathIntegrand(double* x, std::size_t dim, void* params) {
    const double mass = ((double*)params)[0],
                 freq = ((double*)params)[1],
@@ -136,7 +136,7 @@ inline MCResult VegasMCAmplitude
    auto BCs = osci.BoundaryConditions();
    auto t_bounds = GetKeys(BCs);
    if( t_bounds.size() != 2)
-      osci.Throw("in function VEGASMCAmplitude: need two boundary conditions");
+      osci.Throw("in function VegasMCAmplitude: need two boundary conditions");
    const double step = (t_bounds[1] - t_bounds[0])/nSteps;
    const std::size_t dim = nSteps - 1;
    double* params = new double[5];
@@ -168,7 +168,7 @@ inline MCResult VegasMCAmplitude
 }
 
 // this template integrates a generic function accepting a double* as an argument
-template<class Function> inline MCResult VEGASIntegrate
+template<class Function> inline MCResult VegasIntegrate
  (Function& func, std::size_t dim, void *params, double xmin,
   double xmax, std::size_t nEvals) {
    gsl_monte_function integrand {func, dim, params};
