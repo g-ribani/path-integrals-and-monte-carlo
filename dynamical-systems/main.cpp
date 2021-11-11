@@ -29,7 +29,6 @@ int main() {
       std::cout << "\nrepeat = " << repeat << '\n' << std::flush;
 
    #ifdef BE_CRUDE
-      #pragma omp parallel
       amp = CrudeMCAmplitude(&osci, nSteps, xmin, xmax, gen, nEvals);
       std::clog << "Crude MonteCarlo amplitude = "
                << amp.res << " +/- " << amp.err << " // " << nSteps << " steps"
@@ -39,7 +38,6 @@ int main() {
 
    #ifdef BE_VEGAS
       try{
-         #pragma omp parallel
          amp = VegasMCAmplitude(osci, nSteps, xmin, xmax, nEvals);
       }
       catch(int errcode) {
