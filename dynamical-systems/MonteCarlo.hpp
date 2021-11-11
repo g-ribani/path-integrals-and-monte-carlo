@@ -4,7 +4,7 @@
 #include <gsl/gsl_monte.h>
 #include <gsl/gsl_monte_vegas.h>
 #include <gsl/gsl_rng.h>
-#include <iostream>  // std::cout
+// #include <iostream>  // std::cout
 #include <numeric>   // std::accumulate
 #include <random> // std::uniform_real_distribution, std::normal_distribution
 #include <utility>  // std::pair
@@ -101,7 +101,7 @@ struct MCResult {
 };
 
 template<class Obj, class Generator> inline MCResult
- CrudeMCAmplitude (Basic_Particle1D* part, std::size_t nSteps,
+ CrudeMCAmplitude(Basic_Particle1D* part, std::size_t nSteps,
   double xmin, double xmax, Generator& gen, std::size_t nEvals) {
    std::uniform_real_distribution<double> distr(xmin, xmax);
    std::vector<double> evals;
@@ -131,18 +131,18 @@ template<class Obj, class Generator> inline MCResult
 }
 
 inline MCResult VegasMCAmplitude
- (EuclidHarmonicOscillator1D& osci, std::size_t nSteps,
+ (EuclidHarmonicOscillator1D* osci, std::size_t nSteps,
   double xmin, double xmax, std::size_t nEvals) {
-   auto BCs = osci.BoundaryConditions();
+   auto BCs = osci->BoundaryConditions();
    auto t_bounds = GetKeys(BCs);
    if( t_bounds.size() != 2)
-      osci.Throw("in function VegasMCAmplitude: need two boundary conditions");
+      osci->Throw("in function VegasMCAmplitude: need two boundary conditions");
    const double step = (t_bounds[1] - t_bounds[0])/nSteps;
    const std::size_t dim = nSteps - 1;
    double* params = new double[5];
    auto x_bounds = GetValues(BCs);
-   params[0] = osci.Mass(),
-   params[1] = osci.Frequency(),
+   params[0] = osci->Mass(),
+   params[1] = osci->Frequency(),
    params[2] = step,
    params[3] = x_bounds[0],
    params[4] = x_bounds[1];
