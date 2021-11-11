@@ -9,8 +9,8 @@ int main(int nargs, char const **args) {
       exit(1);
    }
    std::ofstream outputs[2];
-   outputs[0].open(args[1], std::ios::out | std::ios::ate),
-   outputs[1].open(args[2], std::ios::out | std::ios::ate);
+   outputs[0].open(args[1], std::ios::out | std::ios::app),
+   outputs[1].open(args[2], std::ios::out | std::ios::app);
 
    EuclidHarmonicOscillator1D osci(1., 1.);
    osci.AddBoundaryCondition(0.,0),
