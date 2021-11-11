@@ -20,7 +20,7 @@ n_evals = 1e7               #
 max_n = max(crude_last_line - crude_first_line,
             vegas_last_line - vegas_first_line)
 plt.hlines(y = exact_amp, xmin = 0, xmax = max_n, color = 'red',
-            label = "exact =" + str(round(exact_amp,4)))
+            label = "exact =" + str(round(exact_amp,6)))
 
 # plotting crude data
 for n_line in range(crude_first_line, crude_last_line + 1) :
@@ -63,7 +63,7 @@ plt.hlines( y = average, xmin = 0, xmax = 0, color = 'orange',
 plt.xlabel("1 unit = " + str(int(n_evals)) +
             " function evaluations (arbitrary offset)")
 plt.ylabel("amplitude (hbar = 1)")
-plt.legend(loc="upper left")
+plt.legend(loc="upper right")
 plt.show()
 
 
