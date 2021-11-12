@@ -16,8 +16,8 @@ template<class Real> inline std::vector<Real> LinearRange
       else if(nPoints == 1) ret.push_back((in + fin)/2.); // midpoint if nPoints == 1
       else {
          const Real step = (fin - in)/(nPoints - 1);
-         for(std::size_t k = 0; k != nPoints; ++k, in += step)
-            ret.push_back(in);
+         for(std::size_t k = 0; k != nPoints; ++k)
+            ret.push_back(in+k*step);
       }
       return ret;
 }
