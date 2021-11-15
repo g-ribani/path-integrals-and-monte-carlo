@@ -30,16 +30,16 @@ struct EuclidFreeParticle1D {
          *std::exp( -mass*SQUARE(deltaX)/(2.*deltaT) );
    }
    protected:
-   double n_steps;
+   std::size_t n_steps;
    double time_step;
 };
 
 template<> struct PathIntegrand<EuclidFreeParticle1D>
  : EuclidFreeParticle1D {
-   double operator() (std::vector<double> const &x) const {
+   double operator() (const double *x) const {
       using size_type = std::vector<double>::size_type;
-      auto const dim = x.size();
-      std::vector<double> deltaX(dim + 1);
+      auto const dim = n_steps - 1;
+      std::vector<double> deltaX(n_steps);
       deltaX[0] = x[0] - initial.x;
       for(size_type k = 1; k != dim; ++k) deltaX[k] = x[k] - x[k-1];
       deltaX[dim] = final.x - x[dim-1];
@@ -49,6 +49,9 @@ template<> struct PathIntegrand<EuclidFreeParticle1D>
          ret *= std::sqrt(mass/(2.*M_PI*time_step)) * std::exp(-deltaS);
       }
       return ret;
+   }
+   double operator() (std::vector<double> const &x) const {
+      return operator()( x.data() );
    }
    PathIntegrand(const EuclidFreeParticle1D &part)
       : EuclidFreeParticle1D(part) {}
@@ -82,16 +85,16 @@ struct EuclidHarmonicOscillator1D {
       return *this;
    }
    protected:
-   double n_steps;
+   std::size_t n_steps;
    double time_step;
 };
 
 template<> struct PathIntegrand<EuclidHarmonicOscillator1D>
  : EuclidHarmonicOscillator1D {
-   double operator() (std::vector<double> const &x) const {
+   double operator() (const double *x) const {
       using size_type = std::vector<double>::size_type;
-      auto const dim = x.size();
-      std::vector<double> deltaX(dim + 1);
+      auto const dim = n_steps - 1;
+      std::vector<double> deltaX(n_steps);
       deltaX[0] = x[0] - initial.x;
       for(size_type k = 1; k != dim; ++k) deltaX[k] = x[k] - x[k-1];
       deltaX[dim] = final.x - x[dim-1];
@@ -111,6 +114,9 @@ template<> struct PathIntegrand<EuclidHarmonicOscillator1D>
                   *( SQUARE(final.x) + SQUARE(x[dim-1]) );
       ret *= std::sqrt(mass/(2.*M_PI*time_step)) * std::exp(-deltaS);
       return ret;
+   }
+   double operator() (std::vector<double> const &x) const {
+      return operator()( x.data() );
    }
    PathIntegrand(const EuclidHarmonicOscillator1D &osci)
       : EuclidHarmonicOscillator1D(osci) {}
@@ -136,17 +142,17 @@ template<class PotentialFunc> struct EuclidParticle1D {
       return *this;
    }
    protected:
-   double n_steps;
+   std::size_t n_steps;
    double time_step;
 };
 
 template<class PotentialFunc>
  struct PathIntegrand<EuclidParticle1D<PotentialFunc>>
  : EuclidParticle1D<PotentialFunc> {
-   double operator() (std::vector<double> const &x) const {
+   double operator() (const double *x) const {
       using size_type = std::vector<double>::size_type;
-      auto const dim = x.size();
-      std::vector<double> deltaX(dim + 1);
+      auto const dim = this->n_steps - 1;
+      std::vector<double> deltaX(this->n_steps);
       deltaX[0] = x[0] - this->initial.x;
       for(size_type k = 1; k != dim; ++k) deltaX[k] = x[k] - x[k-1];
       deltaX[dim] = this->final.x - x[dim-1];
@@ -166,6 +172,9 @@ template<class PotentialFunc>
               + time_step*( potential(this->final.x) + potential(x[dim-1]) )/2.;
       ret *= std::sqrt(mass/(2.*M_PI*time_step)) * std::exp(-deltaS);
       return ret;
+   }
+   double operator() (std::vector<double> const &x) const {
+      return operator()( x.data() );
    }
    PathIntegrand(const EuclidParticle1D<PotentialFunc> &part)
       : EuclidParticle1D<PotentialFunc>(part) {}
