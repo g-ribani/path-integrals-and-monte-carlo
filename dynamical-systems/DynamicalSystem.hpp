@@ -45,6 +45,7 @@ template<class CT, class VT> class DynamicalSystem {
    }
    std::map<CoordType, ValueType> BoundaryConditions() const { return _BCs; }
    virtual ValueType ClassicalValue (CoordType t, double epsi) const {
+      UnusedVariable(t, epsi);
       Throw("don't know how to solve this system");
       return ValueType();
    }
@@ -118,6 +119,7 @@ template<> class DynamicalSystem<double, double> {
    }
    std::map<double, double> BoundaryConditions() const { return _BCs; }
    virtual double ClassicalValue (double t, double epsi) const {
+      UnusedVariable(t, epsi);
       Throw("in method ClassicalValue: don't know how to solve this system");
       return 0.;
    }
@@ -224,6 +226,7 @@ class EuclidFreeParticle1D : public Basic_Particle1D {
    }
    double ClassicalValue
     (double tau, double epsi = 0.) const override {
+      UnusedVariable(epsi);
       if(!IsSolvable())
          Throw("in method ClassicalValue: cannot solve the classical motion");
       auto t = GetKeys(_BCs);
@@ -264,6 +267,7 @@ class EuclidHarmonicOscillator1D : public Basic_Particle1D {
    }
    double ClassicalValue
     (double tau, double epsi = 0.) const override {
+      UnusedVariable(epsi);
       if(!IsSolvable())
          Throw("in method ClassicalValue: cannot solve the classical motion");
       auto t = GetKeys(_BCs);
