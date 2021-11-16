@@ -1,1 +1,1 @@
-g++ -std=c++17 -Wpedantic -Wall -Wextra -DPRINT_TO_FILE -DN_THREADS=2 -O3 -pthread naive.cpp -o naive.exe
+g++ -std=c++17 -Wpedantic -Wall -Wextra -DPRINT_LOG -DN_THREADS=2 -pthread -g -O3 naive.cpp -o naive
