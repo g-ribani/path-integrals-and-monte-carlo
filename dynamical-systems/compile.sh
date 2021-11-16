@@ -1,3 +1,1 @@
-g++ -std=c++17 -Wpedantic -Wall -Wextra -DBE_VEGAS -O3 -c main.cpp
-g++ main.o -lgsl -lgslcblas -lm -o main
-
+g++ main.cpp -DBE_CRUDE -DBE_VEGAS -std=c++17 -Wpedantic -Wall -Wextra -lm -lgsl -lgslcblas -O3 -o main
