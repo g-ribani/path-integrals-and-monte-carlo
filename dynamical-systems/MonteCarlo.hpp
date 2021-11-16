@@ -1,9 +1,7 @@
 #include <chrono>
 #include <cmath>  // std::exp, std::sqrt, std::acos, std::pow
 #include "DynamicalSystem.hpp"
-#include <gsl/gsl_monte.h>
 #include <gsl/gsl_monte_vegas.h>
-#include <gsl/gsl_rng.h>
 // #include <iostream>  // std::cout
 #include <numeric>   // std::accumulate
 #include <random> // std::uniform_real_distribution, std::normal_distribution
