@@ -4,7 +4,6 @@
 #include <vector>
 #include <utility>
 #include <random>
-#include <iostream>
 #include <gsl/gsl_monte_vegas.h>
 
 // The struct GSLMonteVegas is a C++ wrapper for the gsl_monte_vegas routine,
