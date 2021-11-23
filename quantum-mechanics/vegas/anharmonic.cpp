@@ -12,7 +12,7 @@
 
 // TASK:
 //    Compute the energy and wavefunction of the ground state for the
-//    harmonic oscillator.
+//    anharmonic oscillator.
 
 // USAGE:
 //    For plotting, provide a log file name on the command line.
@@ -27,12 +27,15 @@ int main(int narg, char const **args) {
    double mass = 1.,
           frequency = 1.,
           time_step =  0.5;
+   auto potential = [mass, frequency](double x) {
+      return mass*pow_2(frequency*x)/2. + pow_4(x)/2.;
+   };
    size_t n_steps = 8;
    double propa_time = n_steps*time_step,
           delta_x = 5.;
           //^ Paths based at x can span the interval ]x-delta_x, x+delta_x[.
-   double err = 1e-2;
-   EuclidHarmonicOscillator1D osci(mass, frequency);
+   double err = 5e-3;
+   EuclidParticle1D osci(mass, potential);
 
    // Set output stream:
    std::ostream *os;
@@ -50,13 +53,15 @@ int main(int narg, char const **args) {
       }
       else os = &file;
    }
-   cout << "\nmass = " << mass << '\n'
+   cout << "mass = " << mass << '\n'
         << "frequency = " << frequency << '\n'
+        << "potential = harmonic + x^4/2\n"
         << "time_step = " << time_step << '\n'
         << "n_steps = " << n_steps << "\n\n" << std::flush;
    if(file) {
-      (*os) << "\nmass = " << mass << '\n'
+      (*os) << "mass = " << mass << '\n'
             << "frequency = " << frequency << '\n'
+            << "potential = harmonic + x^4/2\n"
             << "time_step = " << time_step << '\n'
             << "n_steps = " << n_steps << "\n\n" << std::flush;
    }
@@ -71,12 +76,10 @@ int main(int narg, char const **args) {
       double x = xs[k];
       osci.Initial(0., x),
       osci.Final(propa_time, x);   // closed path
-      clog << "Exact(x = " << x << ") = "
-           << osci.ExactAmplitude() << '\n';
       std::vector<std::pair<double, double>> bounds
          (n_steps-1, {x-delta_x, x+delta_x});
       GSLMonteVegas vegas_ho
-         (PathIntegrand<EuclidHarmonicOscillator1D>(osci, n_steps),
+         (PathIntegrand<EuclidParticle1D<decltype(potential)>>(osci, n_steps),
           bounds, err);
       try { vegas_ho.Integrate(); }
       catch(int err) {
@@ -88,7 +91,7 @@ int main(int narg, char const **args) {
                    &abserr = vegas_ho.AbsErr(),
                    &chisquare = vegas_ho.ChiSquare();
       amps[k] = result;
-      clog << "Vegas = " << result << " +/- " << 3.*abserr
+      clog << "Vegas(x = " << x << ") = " << result << " +/- " << 3.*abserr
            << ", err = " << abserr/result
            << ", chi square per dof = " << chisquare << "\n\n" << std::flush;
    }
@@ -115,7 +118,7 @@ int main(int narg, char const **args) {
    // Plot via python scripts, if log file was successfully used:
    if(file) {
       file.clear(), file.close();
-      std::string program("python harmonic.py ");
+      std::string program("python anharmonic.py ");
       program.append(file_name).append(" &");
       Unused( std::system(program.data()) );   // return value ignored
    }
