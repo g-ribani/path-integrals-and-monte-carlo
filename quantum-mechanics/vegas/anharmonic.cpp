@@ -34,7 +34,7 @@ int main(int narg, char const **args) {
    double propa_time = n_steps*time_step,
           delta_x = 5.;
           //^ Paths based at x can span the interval ]x-delta_x, x+delta_x[.
-   double err = 5e-3;
+   double err = 1e-2;
    EuclidParticle1D osci(mass, potential);
 
    // Set output stream:
@@ -114,6 +114,7 @@ int main(int narg, char const **args) {
       (*os) << xs[k] << '\t' << ground_wf[k] << '\n';
    }
    (*os) << std::endl;
+   //^ this is essential for correct file reading from the python script
 
    // Plot via python scripts, if log file was successfully used:
    if(file) {

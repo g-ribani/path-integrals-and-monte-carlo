@@ -111,6 +111,7 @@ int main(int narg, char const **args) {
       (*os) << xs[k] << '\t' << ground_wf[k] << '\n';
    }
    (*os) << std::endl;
+   //^ this is essential for correct file reading from the python script
 
    // Plot via python scripts, if log file was successfully used:
    if(file) {

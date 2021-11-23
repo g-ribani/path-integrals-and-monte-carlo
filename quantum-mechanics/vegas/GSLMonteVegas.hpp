@@ -4,6 +4,7 @@
 #include <vector>
 #include <utility>
 #include <random>
+#include <iostream>
 #include <gsl/gsl_monte_vegas.h>
 
 // The struct GSLMonteVegas is a C++ wrapper for the gsl_monte_vegas routine,
@@ -53,7 +54,6 @@ template<class Functor> struct GSLMonteVegas {
       par.stage = 1, // keep the grid, discard the estimate
       Params(par);
       double err{};
-      bool keep_going = false;
       do {
          int err_code = gsl_monte_vegas_integrate
                            (&I, _xl.data(), _xu.data(), _dim,
@@ -62,12 +62,9 @@ template<class Functor> struct GSLMonteVegas {
          if(err_code != 0) throw(err_code);
          _chisquare = gsl_monte_vegas_chisq(_state);
          err = abs(_abserr/_result);
-         if(!keep_going) {
-            par = Params(),
-            par.stage = 3,
-            Params(par);
-            keep_going = true;
-         }
+         par = Params(),
+         par.stage = 3,
+         Params(par);
       }
       while( abs(_chisquare - 1.0) > 0.5 or err > _error_goal);
    }
