@@ -16,6 +16,7 @@
 
 // USAGE:
 //    For plotting, provide a log file name on the command line.
+//    (it will be automatically put in the log/ subdirectory).
 //    To get less verbose printings on the screen, redirect stderr.
 
 int main(int narg, char const **args) {
@@ -35,13 +36,14 @@ int main(int narg, char const **args) {
           delta_x = 5.;
           //^ Paths based at x can span the interval ]x-delta_x, x+delta_x[.
    double err = 1e-2;
+   size_t n_calls [[maybe_unused]] = 5'000'000;
    EuclidParticle1D osci(mass, potential);
 
    // Set output stream:
    std::ostream *os;
    std::ofstream file;
    std::string file_name;
-   if(narg < 2) os = &clog;
+   if(narg < 2) os = &cout;
    else {
       file_name.append("log/").append(args[1]);
       file.open(file_name, std::ios_base::app);
@@ -81,15 +83,15 @@ int main(int narg, char const **args) {
       GSLMonteVegas vegas_ho
          (PathIntegrand<EuclidParticle1D<decltype(potential)>>(osci, n_steps),
           bounds, err);
-      try { vegas_ho.Integrate(); }
+      try { vegas_ho.Integrate(/*n_calls*/); }
       catch(int err) {
          clog << "Vegas integration routine returned with error code "
               << err << "\n\n" << std::flush;
          continue;
       }
-      double const &result = vegas_ho.Result(),
-                   &abserr = vegas_ho.AbsErr(),
-                   &chisquare = vegas_ho.ChiSquare();
+      double result = vegas_ho.Result(),
+             abserr = vegas_ho.AbsErr(),
+             chisquare = vegas_ho.ChiSquare();
       amps[k] = result;
       clog << "Vegas(x = " << x << ") = " << result << " +/- " << 3.*abserr
            << ", err = " << abserr/result
@@ -114,7 +116,7 @@ int main(int narg, char const **args) {
       (*os) << xs[k] << '\t' << ground_wf[k] << '\n';
    }
    (*os) << std::endl;
-   //^ this is essential for correct file reading from the python script
+         //^ this is essential for correct file reading from the python script
 
    // Plot via python scripts, if log file was successfully used:
    if(file) {

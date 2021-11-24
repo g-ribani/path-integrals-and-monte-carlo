@@ -15,7 +15,8 @@
 //    harmonic oscillator.
 
 // USAGE:
-//    For plotting, provide a log file name on the command line.
+//    For plotting, provide a log file name on the command line
+//    (it will be automatically put in the log/ subdirectory).
 //    To get less verbose printings on the screen, redirect stderr.
 
 int main(int narg, char const **args) {
@@ -32,13 +33,14 @@ int main(int narg, char const **args) {
           delta_x = 5.;
           //^ Paths based at x can span the interval ]x-delta_x, x+delta_x[.
    double err = 1e-2;
+   size_t n_calls [[maybe_unused]] = 5'000'000;
    EuclidHarmonicOscillator1D osci(mass, frequency);
 
    // Set output stream:
    std::ostream *os;
    std::ofstream file;
    std::string file_name;
-   if(narg < 2) os = &clog;
+   if(narg < 2) os = &cout;
    else {
       file_name.append("log/").append(args[1]);
       file.open(file_name, std::ios_base::app);
@@ -64,7 +66,7 @@ int main(int narg, char const **args) {
    // Compute the amplitude on several closed paths:
    double const x_begin = 0.,
                 x_end = 2.;
-   size_t const n_points = 11;
+   size_t const n_points = 8;
    std::vector<double> xs = LinearRange(x_begin, x_end, n_points),
                        amps(n_points);
    for(size_t k = 0; k != n_points; ++k) {
@@ -78,15 +80,15 @@ int main(int narg, char const **args) {
       GSLMonteVegas vegas_ho
          (PathIntegrand<EuclidHarmonicOscillator1D>(osci, n_steps),
           bounds, err);
-      try { vegas_ho.Integrate(); }
+      try { vegas_ho.Integrate(/*n_calls*/); }
       catch(int err) {
          clog << "Vegas integration routine returned with error code "
               << err << "\n\n" << std::flush;
          continue;
       }
-      double const &result = vegas_ho.Result(),
-                   &abserr = vegas_ho.AbsErr(),
-                   &chisquare = vegas_ho.ChiSquare();
+      double result = vegas_ho.Result(),
+             abserr = vegas_ho.AbsErr(),
+             chisquare = vegas_ho.ChiSquare();
       amps[k] = result;
       clog << "Vegas = " << result << " +/- " << 3.*abserr
            << ", err = " << abserr/result
@@ -111,7 +113,7 @@ int main(int narg, char const **args) {
       (*os) << xs[k] << '\t' << ground_wf[k] << '\n';
    }
    (*os) << std::endl;
-   //^ this is essential for correct file reading from the python script
+         //^ this is essential for correct file reading from the python script
 
    // Plot via python scripts, if log file was successfully used:
    if(file) {

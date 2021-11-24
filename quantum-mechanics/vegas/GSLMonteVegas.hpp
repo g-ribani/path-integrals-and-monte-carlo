@@ -14,8 +14,8 @@
    //               std::vector<std::pair<double, double>> const &bounds,
    //               double const error_goal,
    //               gsl_rng_type const *gen_type = gsl_rng_mt19937);
-   // void Integrate();                // performs error checking
-   // void Integrate(size_t n-calls);  // one-shot integration
+   // void Integrate();                      // performs error checking
+   // void Integrate(size_t const n-calls);  // one-shot integration
 // The result, absolute error, chisquare and integrator state can be accessed
 // via public member functions Result(), AbsErr(), ChiSquare(), State().
 // Params of the integrator can be gotten and set via the homonymous method.
@@ -69,7 +69,7 @@ template<class Functor> struct GSLMonteVegas {
       }
       while( abs(_chisquare - 1.0) > 0.5 or err > _error_goal);
    }
-   void Integrate(size_t n_calls) {
+   void Integrate(size_t const n_calls) {
       size_t const warmup_calls = 10'000;
       gsl_monte_function I = {_GSLIntegrand, _dim, (void*)this};
       gsl_rng_set(_gen, std::random_device{}());
