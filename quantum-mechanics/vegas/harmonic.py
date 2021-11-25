@@ -10,19 +10,25 @@ read = False
 coord = []
 wave_func = []
 for line in file:
+    splitted = line.split()
     if read :
-        splitted = line.split()
         if(len(splitted) == 0) :
             break
         coord.append(float(splitted[0]))
         wave_func.append(float(splitted[1]))
+    elif len(splitted) == 0 :
+        continue
+    elif splitted[0] == "mass" :
+        mass = float(splitted[2])
+    elif splitted[0] == "frequency" :
+        freq = float(splitted[2])
     elif line == "Ground state wavefunction:\n" :
         read = True
         continue
 
 sample_x = np.linspace(min(coord), max(coord), 4*len(coord))
 def psi_0(x) :
-    return np.exp(-x*x/2.)/np.pi**0.25
+    return (mass*freq/np.pi)**0.25*np.exp(-mass*freq*x*x/2.)
 exact_wave_func = [psi_0(x) for x in sample_x]
 
 plt.close()
