@@ -8,7 +8,7 @@
 #include "GSLMonteVegas.hpp"
 #include "PathIntegrals.hpp"
 #include <libIntegrate/Integrate.hpp>
-#include <UtilityFunctions.hpp>
+#include "UtilityFunctions.hpp"
 
 // TASK:
 //    Compute the energy and wavefunction of the ground state for the
@@ -33,7 +33,7 @@ int main(int narg, char const **args) {
           delta_x = 5.;
           //^ Paths based at x can span the interval ]x-delta_x, x+delta_x[.
    double err = 1e-2;
-   size_t n_calls [[maybe_unused]] = 5'000'000;
+   size_t n_calls [[maybe_unused]] = 1'000'000;
    EuclidHarmonicOscillator1D osci(mass, frequency);
 
    // Set output stream:
@@ -52,12 +52,12 @@ int main(int narg, char const **args) {
       }
       else os = &file;
    }
-   cout << "\nmass = " << mass << '\n'
+   cout << "mass = " << mass << '\n'
         << "frequency = " << frequency << '\n'
         << "time_step = " << time_step << '\n'
         << "n_steps = " << n_steps << "\n\n" << std::flush;
    if(file) {
-      (*os) << "\nmass = " << mass << '\n'
+      (*os) << "mass = " << mass << '\n'
             << "frequency = " << frequency << '\n'
             << "time_step = " << time_step << '\n'
             << "n_steps = " << n_steps << "\n\n" << std::flush;

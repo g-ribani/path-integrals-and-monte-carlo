@@ -8,7 +8,7 @@
 #include "GSLMonteVegas.hpp"
 #include "PathIntegrals.hpp"
 #include <libIntegrate/Integrate.hpp>
-#include <UtilityFunctions.hpp>
+#include "UtilityFunctions.hpp"
 
 // TASK:
 //    Compute the energy and wavefunction of the ground state for the

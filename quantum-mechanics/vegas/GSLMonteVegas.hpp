@@ -3,12 +3,12 @@
 
 #include <vector>
 #include <utility>
-#include <random>
+#include <random> // std::random_device
 #include <gsl/gsl_monte_vegas.h>
 
 // The struct GSLMonteVegas is a C++ wrapper for the gsl_monte_vegas routine,
-// which integrates a functor until the desired error goal is achieved. Notice
-// however that the functor must accept a double*.
+// which can integrate a functor until the desired error goal is achieved.
+// Notice however that the functor must accept a double*.
 // Interface:
    // GSLMonteVegas(Functor const &f,
    //               std::vector<std::pair<double, double>> const &bounds,
@@ -18,7 +18,7 @@
    // void Integrate(size_t const n-calls);  // one-shot integration
 // The result, absolute error, chisquare and integrator state can be accessed
 // via public member functions Result(), AbsErr(), ChiSquare(), State().
-// Params of the integrator can be gotten and set via the homonymous method.
+// Params of the integrator can be got and set via the homonymous method.
 
 double _GSLIntegrand(double*, size_t, void*);
 
