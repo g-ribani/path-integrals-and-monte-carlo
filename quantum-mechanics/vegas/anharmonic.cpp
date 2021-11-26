@@ -12,7 +12,7 @@
 
 // TASK:
 //    Compute the energy and wavefunction of the ground state for the
-//    anharmonic oscillator.
+//    anharmonic oscillator using the Vegas algortihm.
 
 // USAGE:
 //    For plotting, provide a log file name on the command line.
@@ -36,7 +36,7 @@ int main(int narg, char const **args) {
           delta_x = 5.;
           //^ Paths based at x can span the interval ]x-delta_x, x+delta_x[.
    double err = 1e-2;
-   size_t n_calls [[maybe_unused]] = 5'000'000;
+   size_t n_calls = 100'000;
    EuclidParticle1D osci(mass, potential);
 
    // Set output stream:
@@ -83,7 +83,7 @@ int main(int narg, char const **args) {
       GSLMonteVegas vegas_ho
          (PathIntegrand<EuclidParticle1D<decltype(potential)>>(osci, n_steps),
           bounds, err);
-      try { vegas_ho.Integrate(/*n_calls*/); }
+      try { vegas_ho.Integrate(n_calls); }
       catch(int err) {
          clog << "Vegas integration routine returned with error code "
               << err << "\n\n" << std::flush;

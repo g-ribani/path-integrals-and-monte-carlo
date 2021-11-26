@@ -26,7 +26,9 @@ for line in file:
         read = True
         continue
 
-sample_x = np.linspace(min(coord), max(coord), 4*len(coord))
+inter_points = 4
+sample_x = np.linspace(min(coord), max(coord),
+                       (inter_points + 1)*len(coord) - inter_points)
 def psi_0(x) :
     return (mass*freq/np.pi)**0.25*np.exp(-mass*freq*x*x/2.)
 exact_wave_func = [psi_0(x) for x in sample_x]
