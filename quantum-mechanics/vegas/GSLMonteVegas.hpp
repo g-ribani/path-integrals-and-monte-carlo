@@ -14,11 +14,16 @@
    //               std::vector<std::pair<double, double>> const &bounds,
    //               double const error_goal,
    //               gsl_rng_type const *gen_type = gsl_rng_mt19937);
-   // void Integrate();                      // performs error checking
-   // void Integrate(size_t const n-calls);  // one-shot integration
-// The result, absolute error, chisquare and integrator state can be accessed
-// via public member functions Result(), AbsErr(), ChiSquare(), State().
-// Params of the integrator can be got and set via the homonymous method.
+   // GSLMonteVegas& Integrate(size_t const n_calls, int const stage = 0);
+// The Integrate method iteratively calls gsl_monte_vegas_integrate with the
+// user provided n_calls, until the error_goal is achieved. The chisquare is
+// also ensured to be in between 0.5 and 1.5. The optional parameter sets the
+// initial integration stage (see the GSL documentation), the default being a
+// new clean integration. The return value is *this.
+// The result, absolute error, chisquare and pointer to integrator state can be
+// accessed via public member functions Result(), AbsErr(), ChiSquare(),
+// State(). Params of the integrator can be got and set via the
+// homonymous method.
 
 double _GSLIntegrand(double*, size_t, void*);
 
@@ -35,6 +40,8 @@ template<class Functor> struct GSLMonteVegas {
          _xu.push_back( std::get<1>(b) );
       }
    }
+   GSLMonteVegas(const GSLMonteVegas&) = delete;
+   GSLMonteVegas& operator=(const GSLMonteVegas&) = delete;
    ~GSLMonteVegas() {
       gsl_rng_free(_gen);
       gsl_monte_vegas_free(_state);
@@ -42,50 +49,32 @@ template<class Functor> struct GSLMonteVegas {
    friend double _GSLIntegrand(double *x, size_t, void *this_) {
       return ((GSLMonteVegas*)this_)->_func(x);
    }
-   void Integrate() {
-      using std::abs;
-      size_t const warmup_calls = 10'000;
+   GSLMonteVegas& Integrate(size_t const n_calls, int const stage = 0) {
       gsl_monte_function I = {_GSLIntegrand, _dim, (void*)this};
       gsl_rng_set(_gen, std::random_device{}());
-      // warmup integration, to set the grid:
-      gsl_monte_vegas_integrate (&I, _xl.data(), _xu.data(), _dim,
-                                 warmup_calls, _gen, _state,
-                                 &_result, &_abserr);
       auto par = Params();
-      par.stage = 1, // keep the grid, discard the estimate
-      Params(par);
+      par.stage = stage, Params(par);
+      if(stage == 0) {
+         // warmup integration, to set the grid:
+         gsl_monte_vegas_integrate (&I, _xl.data(), _xu.data(), _dim,
+                                    n_calls/10, _gen, _state,
+                                    &_result, &_abserr);
+         // keep the grid, discard the estimate:
+         par = Params(), par.stage = 1, Params(par);
+      }
       double err{};
       do {
          int err_code = gsl_monte_vegas_integrate
                            (&I, _xl.data(), _xu.data(), _dim,
-                            10*warmup_calls, _gen, _state,
+                            n_calls, _gen, _state,
                             &_result, &_abserr);
          if(err_code != 0) throw(err_code);
          _chisquare = gsl_monte_vegas_chisq(_state);
-         err = abs(_abserr/_result);
-         par = Params(),
-         par.stage = 3,
-         Params(par);
+         err = std::abs(_abserr/_result);
+         par = Params(), par.stage = 3, Params(par);
       }
-      while( abs(_chisquare - 1.0) > 0.5 or err > _error_goal);
-   }
-   void Integrate(size_t const n_calls) {
-      size_t const warmup_calls = 10'000;
-      gsl_monte_function I = {_GSLIntegrand, _dim, (void*)this};
-      gsl_rng_set(_gen, std::random_device{}());
-      // warmup integration, to set the grid:
-      gsl_monte_vegas_integrate (&I, _xl.data(), _xu.data(), _dim,
-                                 warmup_calls, _gen, _state,
-                                 &_result, &_abserr);
-      auto par = Params();
-      par.stage = 1, // keep the grid, discard the estimate
-      Params(par);
-      int err_code = gsl_monte_vegas_integrate
-                        (&I, _xl.data(), _xu.data(), _dim,
-                         n_calls, _gen, _state,
-                         &_result, &_abserr);
-      if(err_code != 0) throw(err_code);
-      _chisquare = gsl_monte_vegas_chisq(_state);
+      while( std::abs(_chisquare - 1.0) > 0.5 or err > _error_goal);
+      return *this;
    }
    double AbsErr() const { return _abserr; }
    double ChiSquare() const { return _chisquare; }
@@ -101,7 +90,7 @@ template<class Functor> struct GSLMonteVegas {
    gsl_monte_vegas_state* State() const { return _state; }
    private:
    double _abserr, _chisquare, _result;
-   size_t const _dim;
+   size_t _dim;
    double _error_goal;
    Functor _func;
    gsl_rng *_gen;
