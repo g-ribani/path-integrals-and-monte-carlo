@@ -100,7 +100,7 @@ template<class K, class T> inline std::ostream& operator <<
 // (std::ostream&, std::tuple<Types...> const &);
 
 // Avoids compiler warnings on unused variables etc:
-template<class...T> void Unused(T const &...) {}
+template<class...T> void Ignore(T const &...) {}
 
 #endif // UTILITY_FUNCTIONS_HPP
 
