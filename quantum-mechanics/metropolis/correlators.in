@@ -1,0 +1,7 @@
+mass = 1.
+frequency = 1.
+time_step =  0.5
+n_steps = 19
+epsi = 1.4
+n_conf = 10000000
+n_corr = 20
