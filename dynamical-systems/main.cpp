@@ -11,6 +11,7 @@ int main(int nargs, char const **args) {
    std::ofstream outputs[2];
    outputs[0].open(args[1], std::ios::out | std::ios::app),
    outputs[1].open(args[2], std::ios::out | std::ios::app);
+   std::cout << "Press Ctrl-C when enough data are generated...\n\n";
 
    EuclidHarmonicOscillator1D osci(1., 1.);
    osci.AddBoundaryCondition(0.,0),
