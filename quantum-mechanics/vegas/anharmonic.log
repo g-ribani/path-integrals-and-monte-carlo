@@ -1,0 +1,21 @@
+mass = 1
+frequency = 1
+potential = harmonic + x^4/2
+time_step = 0.5
+n_steps = 8
+
+Vacuum energy = 0.671679
+
+Ground state wavefunction:
+0	0.835736
+0.2	0.813041
+0.4	0.750244
+0.6	0.649765
+0.8	0.523807
+1	0.381106
+1.2	0.24845
+1.4	0.139908
+1.6	0.0663668
+1.8	0.0253065
+2	0.00747853
+

@@ -1,10 +1,10 @@
-#include <cstdlib>
+#include <cstdlib>   // std::system
 #include <string>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
 #include <cmath>
-#include <boost/math/constants/constants.hpp>
+#include <vector>
 #include "GSLMonteVegas.hpp"
 #include "PathIntegrals.hpp"
 #include <libIntegrate/Integrate.hpp>
@@ -15,14 +15,13 @@
 //    harmonic oscillator using the Vegas algortihm.
 
 // USAGE:
-//    For plotting, provide a log file name on the command line
-//    (it will be automatically put in the log/ subdirectory).
-//    To get less verbose printings on the screen, redirect stderr.
+//    For plotting, provide a log file name on the command line.
 
 int main(int narg, char const **args) {
    using std::cout, std::clog, std::cerr;
    using namespace boost::math::double_constants;
    cout << std::setprecision(6) << std::fixed;
+   clog << std::setprecision(6) << std::fixed;
 
    // Setup:
    double mass = 1.,
@@ -34,15 +33,18 @@ int main(int narg, char const **args) {
           //^ Paths based at x can span the interval ]x-delta_x, x+delta_x[.
    double err = 1e-2;
    size_t n_calls = 100'000;
-   EuclidHarmonicOscillator1D osci(mass, frequency);
+   EuclidHarmonicOscillator1d osci(mass, frequency);
 
    // Set output stream:
    std::ostream *os;
    std::ofstream file;
    std::string file_name;
-   if(narg < 2) os = &cout;
+   if(narg < 2) {
+      os = &cout;
+      file.setstate(std::ios_base::badbit);
+   }
    else {
-      file_name.append("log/").append(args[1]);
+      file_name = args[1];
       file.open(file_name, std::ios_base::app);
       if(!file) {
       cerr << "Could not open file " << file_name << "... "
@@ -71,26 +73,25 @@ int main(int narg, char const **args) {
                        amps(n_points);
    for(size_t k = 0; k != n_points; ++k) {
       double x = xs[k];
-      osci.Initial(0., x),
-      osci.Final(propa_time, x);   // closed path
-      clog << "Exact(x = " << x << ") = "
+      osci.Initial({0., x}),
+      osci.Final({propa_time, x});   // closed path
+      cout << "Exact(x = " << x << ") = "
            << osci.ExactAmplitude() << '\n';
       std::vector<std::pair<double, double>> bounds
          (n_steps-1, {x-delta_x, x+delta_x});
-      GSLMonteVegas vegas_ho
-         (PathIntegrand<EuclidHarmonicOscillator1D>(osci, n_steps),
-          bounds, err);
-      try { vegas_ho.Integrate(n_calls); }
+      PathIntegrand<EuclidParticle1d> path_integrand(&osci, n_steps);
+      GSLMonteVegas vegas(path_integrand, bounds);
+      try { vegas(n_calls, err); }
       catch(int err) {
-         clog << "Vegas integration routine returned with error code "
+         cout << "Vegas integration routine returned with error code "
               << err << "\n\n" << std::flush;
          continue;
       }
-      double result = vegas_ho.Result(),
-             abserr = vegas_ho.AbsErr(),
-             chisquare = vegas_ho.ChiSquare();
+      double result = vegas.Result(),
+             abserr = vegas.AbsError(),
+             chisquare = vegas.ChiSquare();
       amps[k] = result;
-      clog << "Vegas = " << result << " +/- " << 3.*abserr
+      cout << "Vegas = " << result << " +/- " << 3.*abserr
            << ", err = " << abserr/result
            << ", chi square per dof = " << chisquare << "\n\n" << std::flush;
    }
@@ -113,14 +114,13 @@ int main(int narg, char const **args) {
       (*os) << xs[k] << '\t' << ground_wf[k] << '\n';
    }
    (*os) << std::endl;
-         //^ this is essential for correct file reading from the python script
 
-   // Plot via python scripts, if log file was successfully used:
+   // Plot via python script, if log file was successfully used:
    if(file) {
       file.clear(), file.close();
       std::string program("python harmonic.py ");
       program.append(file_name).append(" &");
-      Unused( std::system(program.data()) );   // return value ignored
+      Ignore( std::system(program.data()) );   // return value ignored
    }
    else file.clear(), file.close();
 }

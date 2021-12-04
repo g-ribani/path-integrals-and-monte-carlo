@@ -1,1 +1,2 @@
-g++ -std=c++17 -Wpedantic -Wall -Wextra -DPRINT_LOG -DN_THREADS=2 -pthread -g -O3 naive.cpp -o naive
+echo assuming Boost directory is /usr/local/boost_1_77_0...
+g++ naive.cpp -std=c++17 -Wpedantic -Wall -Wextra -I/usr/local/boost_1_77_0 -DPRINT_LOG -DN_THREADS=2 -pthread -O3 -o naive
