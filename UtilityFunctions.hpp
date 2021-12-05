@@ -28,13 +28,13 @@ template<class T> inline std::string ClassName(T const &t) {
    return std::string( boost::core::demangle( typeid(t).name() ) );
 }
 
-template<class Vector> size_t FindMinIndex(Vector const& v) {
+template<class Vector> inline size_t FindMinIndex(Vector const& v) {
    size_t ret = 0;
    for(size_t k = 1; k != std::size(v); ++k) if(v[k] < v[ret]) ret = k;
    return ret;
 }
 
-template<class Vector> size_t FindMaxIndex(Vector const& v) {
+template<class Vector> inline size_t FindMaxIndex(Vector const& v) {
    size_t ret = 0;
    for(size_t k = 1; k != std::size(v); ++k) if(v[k] > v[ret]) ret = k;
    return ret;
@@ -57,7 +57,7 @@ template<class K, class V> inline std::vector<V> GetValues
 }
 
 // Avoids compiler warnings on unused variables etc:
-template<class...T> void Ignore(T&&...) {}
+template<class...T> inline void Ignore(T&&...) {}
 
 // Set of template classes and a function which invokes every functor
 // in an std::tuple with the given arguments and returns the tuple of results:
@@ -86,7 +86,7 @@ struct InvokeAndStore<0, FunctorTuple, ResultTuple, Args...> {
                   ResultTuple &res,
                   Args&&...args) {}
 };
-template<class...Functors, class...Args> auto Invoke
+template<class...Functors, class...Args> inline auto Invoke
 (std::tuple<Functors...> funcs, Args&&...args) noexcept {
    std::tuple<std::invoke_result_t<Functors, Args...>...> res;
    Ignore( InvokeAndStore<sizeof...(Functors),
@@ -97,7 +97,7 @@ template<class...Functors, class...Args> auto Invoke
 
 // Invokes every function in an std::vector with the given arguments
 // and returns the vector of results of type Res:
-template<class Res, class...Args> std::vector<Res> Invoke
+template<class Res, class...Args> inline std::vector<Res> Invoke
 (std::vector<std::function<Res(Args...)>> funcs, Args...args) {
    size_t const size = funcs.size();
    std::vector<Res> res(size);
@@ -108,7 +108,7 @@ template<class Res, class...Args> std::vector<Res> Invoke
 
 // Invokes every function in an std::array with the given arguments
 // and returns the array of results of type Res:
-template<class Res, size_t N, class...Args> std::array<Res, N> Invoke
+template<class Res, size_t N, class...Args> inline std::array<Res, N> Invoke
 (std::array<std::function<Res(Args...)>, N> funcs, Args...args) {
    std::array<Res, N> res;
    for(size_t k = 0; k != N; ++k)
@@ -187,7 +187,7 @@ template<class...Types> struct PrintTupleElements<1, Types...> {
 template<class...Types> struct PrintTupleElements<0, Types...> {
    PrintTupleElements(std::tuple<Types...> const&, std::ostream&) {}
 };
-template<class...Types> std::ostream& operator <<
+template<class...Types> inline std::ostream& operator <<
 (std::ostream &os, std::tuple<Types...> const &tup) {
    os << '(';
    Ignore( PrintTupleElements<sizeof...(Types), Types...>(tup, os) );
