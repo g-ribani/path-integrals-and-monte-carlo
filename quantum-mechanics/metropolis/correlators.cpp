@@ -146,6 +146,10 @@ int main(int narg, char const **args) {
    // Setup:
    double propa_time = n_steps*time_step;
    EuclidHarmonicOscillator1d osci(mass, frequency);
+   // auto potential
+   // = [&](double x) { return 0.5*mass*POW_2(frequency*x) + 0.5*POW_4(x); };
+   // EuclidParticle1d osci(mass, potential);
+   //^ could also try with some parity invariant anharmonic potential
    osci.Initial({0., 0.}),
    osci.Final({propa_time, 0.});
    Metropolis<EuclidParticle1d> metropolis(&osci, n_steps);
