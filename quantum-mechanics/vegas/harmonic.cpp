@@ -79,8 +79,9 @@ int main(int narg, char const **args) {
            << osci.ExactAmplitude() << '\n';
       std::vector<std::pair<double, double>> bounds
          (n_steps-1, {x-delta_x, x+delta_x});
-      PathIntegrand<EuclidParticle1d> path_integrand(&osci, n_steps);
-      GSLMonteVegas vegas(path_integrand, bounds);
+      PathIntegrand<EuclidParticle1d> path_integrand(&osci);
+      path_integrand.NSteps(n_steps);
+      GSLMonteVegas vegas(&path_integrand, bounds);
       try { vegas(n_calls, err); }
       catch(int err) {
          cout << "Vegas integration routine returned with error code "

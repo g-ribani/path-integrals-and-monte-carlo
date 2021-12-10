@@ -49,22 +49,24 @@ int main(int narg, char const **args) {
 
    using std::cin, std::cout, std::clog, std::cerr, std::flush, std::endl;
    cout << std::setprecision(6) << std::fixed;
-   clog << std::setprecision(6) << std::fixed;
 
    // Input params:
-   double mass, frequency, time_step;
-   size_t n_steps;
-   double epsi;
-   size_t n_conf, n_corr;
+   double mass, frequency, time_step, epsi;
+   size_t n_steps, n_conf, n_corr, max_interval(1);
 
    // Read inputs:
    std::string word;
-   std::vector<bool> read_params(7, false);
+   std::vector<bool> read_params(8, false);
    do {
       cin >> word;
       if(!cin) {
          cin.clear();
-         break;
+         if(!IsTrue(read_params)) {
+            cerr << "Not all necessary parameters could be read "
+                    "from imput file. Exiting.\n";
+            exit(1);
+         }
+         else break;
       }
       else if(word == "mass") {
          cin >> word,
@@ -101,6 +103,11 @@ int main(int narg, char const **args) {
          cin >> n_corr;
          if(cin) read_params[6] = true;
       }
+      else if(word == "max_interval") {
+         cin >> word,
+         cin >> max_interval;
+         if(cin) read_params[7] = true;
+      }
       word.erase();
    }
    while(!IsTrue(read_params));
@@ -132,7 +139,8 @@ int main(int narg, char const **args) {
          << "n_steps = " << n_steps << '\n'
          << "n_conf = " << n_conf << '\n'
          << "n_corr = " << n_corr << '\n'
-         << "epsi = " << epsi << "\n\n" << flush;
+         << "epsi = " << epsi << '\n'
+         << "max_interval = " << max_interval << "\n\n" << flush;
    if(file) {
       file  << "mass = " << mass << '\n'
             << "frequency = " << frequency << '\n'
@@ -140,7 +148,8 @@ int main(int narg, char const **args) {
             << "n_steps = " << n_steps << '\n'
             << "n_conf = " << n_conf << '\n'
             << "n_corr = " << n_corr << '\n'
-            << "epsi = " << epsi << "\n\n" << flush;
+            << "epsi = " << epsi << '\n'
+            << "max_interval = " << max_interval << "\n\n" << flush;
    }
 
    // Setup:
@@ -152,25 +161,22 @@ int main(int narg, char const **args) {
    //^ could also try with some parity invariant anharmonic potential
    osci.Initial({0., 0.}),
    osci.Final({propa_time, 0.});
-   Metropolis<EuclidParticle1d> metropolis(&osci, n_steps);
+   Metropolis<EuclidParticle1d> metropolis(&osci);
+   metropolis.NSteps(n_steps);
 
    // Compute the propagator for the first time intervals on the lattice:
-   size_t max_interval = /*n_steps/4*/ 8;
-   std::vector<double> propas, errs;
    std::vector<std::function<double(std::vector<double>)>> kernels;
    for(size_t i = 0; i <= max_interval; ++i)
       kernels.push_back( Kernel1(n_steps, i) );
-   metropolis(kernels,
-              n_conf, n_corr, 100*n_corr, epsi,
-              BC_Type::periodic);
-   propas = metropolis.Results(),
-   errs = metropolis.AbsErrors();
-   cout << '\n';
-   cout << "last accept rate: " << metropolis.AcceptRate() << "\n\n";
+   metropolis.BoundaryConditions(BC_Type::periodic);
+   metropolis(kernels, n_conf, n_corr, 100*n_corr, epsi);
+   std::vector<double> propas = metropolis.Averages(),
+                       errs = metropolis.AbsErrors();
+   cout << "accept rate: " << metropolis.AcceptRate() << "\n\n";
 
    // Elaborate:
    std::vector<double> energies(max_interval), errors(max_interval);
-   for(size_t i = 0; i <= max_interval-1; ++i) {
+   for(size_t i = 0; i != max_interval; ++i) {
       energies[i]
          = std::log(propas[i]/propas[i+1])/time_step,
       errors[i]
@@ -187,7 +193,7 @@ int main(int narg, char const **args) {
 
    // Print out:
    *out_stream << "excitation energy estimates:\n";
-   for(size_t i = 0; i != max_interval-1; ++i)
+   for(size_t i = 0; i != max_interval; ++i)
       *out_stream << i << " / " << i+1 << " -> "
            << energies[i] << " +/- " << errors[i] << '\n';
    *out_stream << '\n' << flush;

@@ -11,6 +11,7 @@
 #include <type_traits>  // std::invoke_result
 #include <boost/core/demangle.hpp>
 #include <ostream>
+#include <stdexcept>
 
 
 // Small powers:
@@ -29,14 +30,20 @@ template<class T> inline std::string ClassName(T const &t) {
 }
 
 template<class Vector> inline size_t FindMinIndex(Vector const& v) {
+   size_t const size = std::size(v);
+   if(size == 0)  throw std::length_error("zero size container passed "
+                                          "to function FindMinIndex");
    size_t ret = 0;
-   for(size_t k = 1; k != std::size(v); ++k) if(v[k] < v[ret]) ret = k;
+   for(size_t k = 1; k != size; ++k) if(v[k] < v[ret]) ret = k;
    return ret;
 }
 
 template<class Vector> inline size_t FindMaxIndex(Vector const& v) {
+   size_t const size = std::size(v);
+   if(size == 0)  throw std::length_error("zero size container passed "
+                                          "to function FindMaxIndex");
    size_t ret = 0;
-   for(size_t k = 1; k != std::size(v); ++k) if(v[k] > v[ret]) ret = k;
+   for(size_t k = 1; k != size; ++k) if(v[k] > v[ret]) ret = k;
    return ret;
 }
 
@@ -59,13 +66,22 @@ template<class K, class V> inline std::vector<V> GetValues
 // Avoids compiler warnings on unused variables etc:
 template<class...T> inline void Ignore(T&&...) {}
 
+// Returns the vector of proper divisors of the argument.
+template<class Integer> inline std::vector<Integer> ProperDivisors
+(Integer const n) {
+   if(n <= 0) throw std::invalid_argument("non-positive integer passed "
+                                          "to function ProperDivisors");
+   std::vector<Integer> divs;
+   for(Integer d = 2; d <= n/2; ++d)
+      if(n % d == 0) divs.push_back(d);
+   return divs;
+}
+
 // Set of template classes and a function which invokes every functor
 // in an std::tuple with the given arguments and returns the tuple of results:
 template<size_t num, class FunctorTuple, class ResultTuple, class...Args>
 struct InvokeAndStore {
-   InvokeAndStore(FunctorTuple &funcs,
-                  ResultTuple &res,
-                  Args&&...args) {
+   InvokeAndStore(FunctorTuple &funcs, ResultTuple &res, Args&&...args) {
       Ignore( InvokeAndStore<num-1, FunctorTuple, ResultTuple, Args...>
                (funcs, res, std::forward<Args>(args)...) );
       std::get<num-1>(res)
@@ -74,17 +90,13 @@ struct InvokeAndStore {
 };
 template<class FunctorTuple, class ResultTuple, class...Args>
 struct InvokeAndStore<1, FunctorTuple, ResultTuple, Args...> {
-   InvokeAndStore(FunctorTuple &funcs,
-                  ResultTuple &res,
-                  Args&&...args) {
+   InvokeAndStore(FunctorTuple &funcs, ResultTuple &res, Args&&...args) {
       std::get<0>(res) = std::get<0>(funcs)(std::forward<Args>(args)...);
    }
 };
 template<class FunctorTuple, class ResultTuple, class...Args>
 struct InvokeAndStore<0, FunctorTuple, ResultTuple, Args...> {
-   InvokeAndStore(FunctorTuple &funcs,
-                  ResultTuple &res,
-                  Args&&...args) {}
+   InvokeAndStore(FunctorTuple &funcs, ResultTuple &res, Args&&...args) {}
 };
 template<class...Functors, class...Args> inline auto Invoke
 (std::tuple<Functors...> funcs, Args&&...args) noexcept {

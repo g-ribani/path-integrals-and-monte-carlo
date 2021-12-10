@@ -5,3 +5,4 @@ n_steps = 19
 epsi = 1.4
 n_conf = 10000000
 n_corr = 20
+max_interval = 8
