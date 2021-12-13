@@ -5,10 +5,9 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
-#include "GSLMonteVegas.hpp"
-#include "PathIntegrals.hpp"
+#include "headers/GSLMonteVegas.hpp"
+#include "headers/EuclidParticle1d.hpp"
 #include <libIntegrate/Integrate.hpp>
-#include "UtilityFunctions.hpp"
 
 // TASK:
 //    Compute the energy and wavefunction of the ground state for the
@@ -17,12 +16,12 @@
 // USAGE:
 //    For plotting, provide a log file name on the command line.
 
+
 int main(int narg, char const **args) {
 
    using std::cout, std::clog, std::cerr;
    using namespace boost::math::double_constants;
    cout << std::setprecision(6) << std::fixed;
-   clog << std::setprecision(6) << std::fixed;
 
    // Setup:
    double mass = 1.,
@@ -80,8 +79,8 @@ int main(int narg, char const **args) {
       osci.Final({propa_time, x});   // closed path
       std::vector<std::pair<double, double>> bounds
          (n_steps-1, {x-delta_x, x+delta_x});
+      osci.NSteps(n_steps);
       PathIntegrand<EuclidParticle1d> path_integrand(&osci);
-      path_integrand.NSteps(n_steps);
       GSLMonteVegas vegas(&path_integrand, bounds);
       try { vegas(n_calls, err); }
       catch(int err) {

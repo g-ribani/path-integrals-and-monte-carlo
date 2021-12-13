@@ -7,8 +7,7 @@
 #include <vector>
 #include <functional>
 #include <boost/math/statistics/univariate_statistics.hpp>
-#include "PathIntegrals.hpp"
-#include "UtilityFunctions.hpp"
+#include "headers/EuclidHarmonicOscillator1d.hpp"
 
 // TASK:
 //    Compute the uncertainties on the first excitation energy for the
@@ -18,9 +17,10 @@
 // USAGE:
 //    For plotting, provide a log file name on the command line.
 
+
 struct Kernel1 {
    Kernel1(size_t const n, size_t const i) : interval(i), n_steps(n) {}
-   template<class Vector> double operator() (Vector const &x) {
+   template<class Vector> double operator() (Vector &&x) {
       double ker = 0.;
       for(size_t site = 0; site != n_steps; ++site)
          ker += x[site]*x[(site+interval) % n_steps];
@@ -32,7 +32,7 @@ struct Kernel1 {
 
 struct Kernel3 {
    Kernel3(size_t const n, size_t const i) : interval(i), n_steps(n) {}
-   template<class Vector> double operator() (Vector&& x) {
+   template<class Vector> double operator() (Vector &&x) {
       double ker = 0.;
       for(size_t site = 0; site != n_steps; ++site)
          ker += POW_3(x[site]*x[(site+interval) % n_steps]);
@@ -149,14 +149,15 @@ int main(int narg, char const **args) {
    EuclidHarmonicOscillator1d osci(mass, frequency);
    osci.Initial({0., 0.}),
    osci.Final({propa_time, 0.});
+   osci.NSteps(n_steps);
    Metropolis<EuclidParticle1d> metropolis(&osci);
-   metropolis.NSteps(n_steps);
 
    // Compute the propagator for the first time intervals on the lattice:
    size_t const interval = 2;
-   std::vector<std::function<double(std::vector<double>)>> kernels
+   std::vector<std::function<double(double*)>> kernels
       { Kernel1(n_steps, interval),
          Kernel1(n_steps, interval+1) };
+      //^ try also with Kernel3
    metropolis.BoundaryConditions(BC_Type::periodic);
    auto configs = metropolis(kernels, n_conf, n_corr, 100*n_corr, epsi);
 
